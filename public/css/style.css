@@ -1,0 +1,45 @@
+.card {
+    background-color: #ffffff;
+    border: 1px solid #f0f0f0;
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 16px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    font-family: 'Inter', sans-serif; /* Uma fonte limpa e moderna */
+}
+
+/* Efeito ao passar o mouse para parecer um item clicável */
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    border-color: #e0e0e0;
+}
+
+.card h3 {
+    margin-top: 0;
+    color: #1a1a1a;
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    text-transform: uppercase; /* Dá um ar de grife */
+}
+
+.card p {
+    margin: 8px 0;
+    color: #4b5563;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+/* Um detalhe visual para o CPF ou ID */
+.card .label {
+    font-weight: bold;
+    color: #9ca3af;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    display: block;
+    margin-bottom: 2px;
+}
