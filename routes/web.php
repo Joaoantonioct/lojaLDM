@@ -1,150 +1,44 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\EventController;
 use App\Http\Controllers\HomeController;
-use App\Http\Controllers\ProductController;
-use App\Http\Controllers\CartController;
-use App\Http\Controllers\CategoryController;
-use App\Http\Controllers\OrderController;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\Admin\ProductAdminController;
-use App\Http\Controllers\Admin\CategoryAdminController;
-use App\Http\Controllers\Admin\OrderAdminController;
-use App\Http\Controllers\Admin\UserAdminController;
-use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\ProdutoInspiradoController;
+use App\Http\Controllers\ProdutoController;
+use App\Http\Controllers\Auth\GoogleController;
+use App\Http\Controllers\ContaController;
 
-Route::get('/', [HomeController::class, 'index']);
+Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/register', [HomeController::class, 'register'])->name('register');
+Route::get('/login', [HomeController::class, 'login'])->name('login');
 
-// Rotas Resource para Produtos
-Route::resource('produtos', ProductController::class);
+// Rotas para produtos
+Route::get('/produto/{slug}', [ProdutoController::class, 'detalhe'])->name('produto.detalhe');
 
-// Rotas Resource para Categorias
-Route::resource('categories', CategoryController::class);
+// Rotas para produtos inspirados
+Route::get('/produtos-inspirados', [ProdutoInspiradoController::class, 'index'])->name('produtos.inspirados');
 
-// Rotas Resource para Pedidos
-Route::resource('orders', OrderController::class);
+// Rota de teste para página de login
+//Route::get('/login-teste', function () {
+  //  return view('auth.login-teste');
+//})->name('login.teste');
 
-// Rotas Resource para Usuários
-Route::resource('users', UserController::class);
+// Rotas de autenticação Google
+Route::get('/auth/google', [GoogleController::class, 'redirectToGoogle'])->name('auth.google');
+Route::get('/auth/google/callback', [GoogleController::class, 'handleGoogleCallback'])->name('auth.google.callback');
 
-// Rotas para Carrinho
-Route::get('/carrinho', [CartController::class, 'index'])->name('cart.index');
-Route::post('/carrinho/adicionar', [CartController::class, 'add'])->name('cart.add');
-Route::delete('/carrinho/remover/{id}', [CartController::class, 'remove'])->name('cart.remove');
-Route::put('/carrinho/atualizar/{id}', [CartController::class, 'update'])->name('cart.update');
-Route::delete('/carrinho/limpar', [CartController::class, 'clear'])->name('cart.clear');
-
-Route::get('/contato', function () {
-    return view('contato');
-});
-
-Route::get('/sobre', function () {
-    return view('sobre');
-});
-
-// Rotas Administrativas Protegidas
-Route::prefix('admin')->middleware('admin')->group(function () {
+// Rotas privadas (requer autenticação)
+Route::middleware(['auth'])->group(function () {
+    Route::get('/compras', [ContaController::class, 'compras'])->name('compras');
+    Route::get('/historico', [ContaController::class, 'historico'])->name('historico');
+    Route::get('/perguntas', [ContaController::class, 'perguntas'])->name('perguntas');
+    Route::get('/opinioes', [ContaController::class, 'opinioes'])->name('opinioes');
+    Route::get('/favoritos', [ContaController::class, 'favoritos'])->name('favoritos');
+    Route::get('/notificacoes', [ContaController::class, 'notificacoes'])->name('notificacoes');
+    Route::post('/logout', [ContaController::class, 'logout'])->name('logout');
     
-    // Dashboard Admin
-    Route::get('/dashboard', function () {
-        return view('admin.dashboard');
-    })->name('admin.dashboard');
-    
-    // Produtos Admin
-    Route::resource('products', ProductAdminController::class)->names([
-        'index' => 'admin.products.index',
-        'create' => 'admin.products.create',
-        'store' => 'admin.products.store',
-        'show' => 'admin.products.show',
-        'edit' => 'admin.products.edit',
-        'update' => 'admin.products.update',
-        'destroy' => 'admin.products.destroy'
-    ]);
-    
-    // Categorias Admin
-    Route::resource('categories', CategoryAdminController::class)->names([
-        'index' => 'admin.categories.index',
-        'create' => 'admin.categories.create',
-        'store' => 'admin.categories.store',
-        'show' => 'admin.categories.show',
-        'edit' => 'admin.categories.edit',
-        'update' => 'admin.categories.update',
-        'destroy' => 'admin.categories.destroy'
-    ]);
-    
-    // Pedidos Admin
-    Route::resource('orders', OrderAdminController::class)->names([
-        'index' => 'admin.orders.index',
-        'create' => 'admin.orders.create',
-        'store' => 'admin.orders.store',
-        'show' => 'admin.orders.show',
-        'edit' => 'admin.orders.edit',
-        'update' => 'admin.orders.update',
-        'destroy' => 'admin.orders.destroy'
-    ]);
-    
-    // Usuários Admin
-    Route::resource('users', UserAdminController::class)->names([
-        'index' => 'admin.users.index',
-        'create' => 'admin.users.create',
-        'store' => 'admin.users.store',
-        'show' => 'admin.users.show',
-        'edit' => 'admin.users.edit',
-        'update' => 'admin.users.update',
-        'destroy' => 'admin.users.destroy'
-    ]);
-    
-    // Login Admin (não protegido)
-    Route::get('/login', function () {
-        return view('admin.login');
-    })->name('admin.login')->withoutMiddleware('admin');
-    
-    Route::post('/login', function () {
-        // Lógica de login admin
-        return redirect()->route('admin.dashboard');
-    })->name('admin.login.post')->withoutMiddleware('admin');
-    
-    Route::post('/logout', function () {
-        auth()->logout();
-        return redirect()->route('admin.login');
-    })->name('admin.logout')->withoutMiddleware('admin');
-});
-
-Route::get('/categoria', function () {
-    return view('categoria');
-});
-
-Route::get('/busca', function () {
-    return view('busca');
-});
-
-// Rotas de Autenticação
-Route::get('/registrar', [RegisterController::class, 'create'])->name('register');
-Route::post('/registrar', [RegisterController::class, 'store'])->name('register.store');
-
-Route::get('/login', function () {
-    return view('auth.login');
-})->name('login');
-
-Route::post('/login', function () {
-    // Lógica de login
-    return redirect('/')->with('success', 'Login realizado com sucesso!');
-})->name('login.post');
-
-//Route::get('/produto/{id}', function ($id = null) {
- //   return view('produto',['id' => $id]);
-//});
-
-Route::get('/produto', function () {
-    $busca = request('search');
-    return view('produto', ['busca' => $busca]);
-});
-
-Route::get('/checkout/carrinho', function () {
-    return view('checkout.carrinho');
-});
-
-Route::get('/checkout/index', function () {
-    return view('checkout.index');
+    // Rotas para carrinho, checkout, pedidos e perfil
+    Route::get('/carrinho', function () { return view('carrinho'); })->name('carrinho');
+    Route::get('/checkout', function () { return view('checkout'); })->name('checkout');
+    Route::get('/pedidos', function () { return view('pedidos'); })->name('pedidos');
+    Route::get('/perfil', function () { return view('perfil'); })->name('perfil');
 });

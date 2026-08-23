@@ -1,16 +1,15 @@
-@extends('layouts.main')
+@extends('layouts.guest.guest')
 
-@section('title', 'produto')
-
-@section('conteudo')
-
-<p>PAGINA PRODUTO</p>
-
-@if($busca == '')
-    <p>Nenhum produto encontrado</p>
-@else
-    <p>Produtos encontrados: {{ $busca }}</p>
-@endif
-
-
+@section('content')
+    <div class="container">
+        @include('partials.carousel')
+        
+        <div class="row">
+            @include('partials.sidebar')
+            
+            <div class="col-md-9">
+                <!-- Conteúdo específico da página -->
+            </div>
+        </div>
+    </div>
 @endsection

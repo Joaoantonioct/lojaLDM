@@ -1,58 +1,318 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# LDM - E-commerce de Moda Feminina
 
 <p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
+  <img src="/img/ldm.png" alt="LDM Logo" width="200">
 </p>
 
-## About Laravel
+<p align="center">
+  <strong>Loja Virtual de Moda Feminina com Laravel 13</strong>
+</p>
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+<p align="center">
+  <img src="https://img.shields.io/badge/Laravel-13+-FF2D20" alt="Laravel">
+  <img src="https://img.shields.io/badge/PHP-8.3+-777BB4" alt="PHP">
+  <img src="https://img.shields.io/badge/Bootstrap-5.3+-7952B3" alt="Bootstrap">
+  <img src="https://img.shields.io/badge/MySQL-8.0+-4479A1" alt="MySQL">
+</p>
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Sobre o Projeto
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+LDM é uma plataforma de e-commerce completa para moda feminina, desenvolvida com Laravel 13 e PHP 8.3+. O projeto oferece uma experiência de compra moderna e intuitiva, com painel administrativo completo e funcionalidades avançadas de gerenciamento.
 
-## Learning Laravel
+### Características Principais
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+- **Catálogo de Produtos** com categorias organizadas
+- **Sistema de Carrinho** persistente via sessão
+- **Cadastro de Clientes** com validação completa
+- **Painel Administrativo** protegido por middleware
+- **Marketplace na Página Inicial** estilo Mercado Livre
+- **Design Responsivo** com Bootstrap 5
+- **SEO Amigável** com URLs amigáveis
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## Estrutura do Projeto
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+```
+lojaLDM/
+|-- app/
+|   |-- Http/
+|   |   |-- Controllers/
+|   |   |   |-- Admin/           # Controllers administrativos
+|   |   |   |-- Auth/            # Controllers de autenticação
+|   |   |   |-- Api/             # Controllers de API
+|   |   |   |-- CartController.php
+|   |   |   |-- ProductController.php
+|   |   |   |-- CategoryController.php
+|   |   |   |-- OrderController.php
+|   |   |   |-- UserController.php
+|   |   |   |-- HomeController.php
+|   |   |-- Middleware/
+|   |   |   |-- AdminMiddleware.php
+|-- resources/
+|   |-- views/
+|   |   |-- layouts/
+|   |   |   |-- main.blade.php
+|   |   |-- components/
+|   |   |   |-- navbar.blade.php
+|   |   |   |-- footer.blade.php
+|   |   |   |-- admin-navbar.blade.php
+|   |   |-- admin/               # Views administrativas
+|   |   |-- auth/               # Views de autenticação
+|   |   |-- cart/               # Views do carrinho
+|   |   |-- products/           # Views de produtos
+|   |   |-- categories/         # Views de categorias
+|   |   |-- orders/             # Views de pedidos
+|   |   |-- users/              # Views de usuários
+|   |   |-- welcome.blade.php   # Página inicial marketplace
+|-- public/
+|   |-- css/style.css
+|   |-- js/script.js
+|   |-- img/                    # Imagens do projeto
+|-- routes/
+|   |-- web.php                 # Rotas principais
+|   |-- admin.php               # Rotas administrativas
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+## Funcionalidades Implementadas
 
-## Contributing
+### 1. Sistema de Produtos
+- **Listagem de Produtos** com cards visuais
+- **Cadastro de Produtos** com upload de imagem
+- **Edição de Produtos** com preview de imagem
+- **Detalhes do Produto** com informações completas
+- **Categorias** com ícones e cores personalizadas
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### 2. Carrinho de Compras
+- **Adicionar ao Carrinho** via formulários POST
+- **Gestão de Sessão** para persistência
+- **Atualizar Quantidades** em tempo real
+- **Remover Itens** com confirmação
+- **Limpar Carrinho** com um clique
+- **Contador Dinâmico** no navbar
 
-## Code of Conduct
+### 3. Sistema de Usuários
+- **Registro Completo** com validação
+- **Dados Pessoais**: nome, CPF, data nascimento
+- **Endereço Completo**: CEP, rua, número, complemento
+- **Preferências**: newsletter e termos
+- **Login** com redirecionamento inteligente
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### 4. Painel Administrativo
+- **Proteção por Middleware** AdminMiddleware
+- **Dashboard** com estatísticas
+- **Gestão de Produtos** completa
+- **Gestão de Categorias**
+- **Gestão de Pedidos**
+- **Gestão de Usuários**
+- **Navbar Administrativo** exclusivo
 
-## Security Vulnerabilities
+### 5. Marketplace na Página Inicial
+- **Banner Principal** com call-to-action
+- **Categorias em Destaque** com ícones
+- **Produtos em Destaque** com avaliação
+- **Seção de Promoções** com countdown
+- **Newsletter** com captura de leads
+- **CSS Organizado** com comentários
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Tecnologias Utilizadas
 
-## License
+### Backend
+- **Laravel 13** - Framework PHP
+- **PHP 8.3+** - Linguagem principal
+- **MySQL 8.0+** - Banco de dados
+- **Eloquent ORM** - Mapeamento objeto-relacional
+- **Blade Templates** - Sistema de templates
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### Frontend
+- **Bootstrap 5.3** - Framework CSS
+- **Bootstrap Icons** - Ícones vetoriais
+- **Font Awesome 6.5.1** - Ícones adicionais para navbar
+- **JavaScript Vanilla** - Interatividade
+- **CSS Personalizado** - Estilos customizados
+- **Design Responsivo** - Mobile-first
+
+### Ferramentas
+- **Composer** - Gerenciador de dependências
+- **Artisan** - CLI do Laravel
+- **Middleware** - Filtros de requisição
+- **Session** - Armazenamento temporário
+
+## Instalação e Configuração
+
+### Pré-requisitos
+- PHP 8.3 ou superior
+- Composer
+- MySQL 8.0 ou superior
+- Servidor web (Apache/Nginx)
+
+### Passos para Instalação
+
+1. **Clone o repositório**
+```bash
+git clone <repositorio-url> lojaLDM
+cd lojaLDM
+```
+
+2. **Instale as dependências**
+```bash
+composer install
+```
+
+3. **Configure o ambiente**
+```bash
+cp .env.example .env
+php artisan key:generate
+```
+
+4. **Configure o banco de dados**
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=loja_ldm
+DB_USERNAME=root
+DB_PASSWORD=
+```
+
+5. **Execute as migrações**
+```bash
+php artisan migrate
+```
+
+6. **Inicie o servidor**
+```bash
+php artisan serve
+```
+
+7. **Acesse a aplicação**
+```
+http://127.0.0.1:8000
+```
+
+## Rotas Principais
+
+### Rotas Públicas
+- `/` - Página inicial (marketplace)
+- `/produtos` - Listagem de produtos
+- `/carrinho` - Carrinho de compras
+- `/login` - Formulário de login
+- `/register` - Formulário de registro
+
+### Rotas do Carrinho
+- `GET /cart/index` - Exibir carrinho
+- `POST /cart/add` - Adicionar item
+- `DELETE /cart/remove/{id}` - Remover item
+- `PUT /cart/update/{id}` - Atualizar quantidade
+- `POST /cart/clear` - Limpar carrinho
+
+### Rotas Administrativas (protegidas)
+- `/admin/dashboard` - Dashboard admin
+- `/admin/products/*` - Gestão de produtos
+- `/admin/categories/*` - Gestão de categorias
+- `/admin/orders/*` - Gestão de pedidos
+- `/admin/users/*` - Gestão de usuários
+
+## Controllers Implementados
+
+### Controllers Principais
+- `HomeController` - Página inicial
+- `ProductController` - Gestão de produtos
+- `CategoryController` - Gestão de categorias
+- `CartController` - Sistema de carrinho
+- `OrderController` - Gestão de pedidos
+- `UserController` - Gestão de usuários
+
+### Controllers de Autenticação
+- `RegisterController` - Registro de usuários
+- `LoginController` - Autenticação (planejado)
+
+### Controllers Administrativos
+- `ProductAdminController` - Produtos no admin
+- `CategoryAdminController` - Categorias no admin
+- `OrderAdminController` - Pedidos no admin
+- `UserAdminController` - Usuários no admin
+
+## Views Implementadas
+
+### Layout Principal
+- `layouts/main.blade.php` - Layout base
+- `components/navbar.blade.php` - Barra de navegação
+- `components/footer.blade.php` - Rodapé
+
+### Views Públicas
+- `welcome.blade.php` - Marketplace inicial
+- `products/index.blade.php` - Listagem produtos
+- `cart/index.blade.php` - Carrinho
+- `auth/login.blade.php` - Login
+- `auth/register.blade.php` - Registro
+
+### Componentes Implementados
+- `components/navbar.blade.php` - Navbar estilo Mercado Livre (20/04/2026)
+  - Logo com link para home
+  - Barra de pesquisa funcional
+  - Banner promocional "120% do CDI meli+"
+  - Links de categorias (Categorias, Ofertas, Cupons, etc.)
+  - Ações do usuário (Criar conta, Entrar, Compras, Carrinho)
+  - Totalmente responsiva
+  - Ícones Font Awesome integrados
+
+### Views Administrativas
+- `admin/products/index.blade.php` - Gestão produtos
+- `admin/dashboard.blade.php` - Dashboard
+
+## Middleware
+
+### AdminMiddleware
+Protege as rotas administrativas, verificando se:
+- Usuário está autenticado
+- Usuário possui tipo 'admin'
+- Redireciona para login se não autorizado
+
+## CSS e Estilização
+
+### CSS Personalizado (`public/css/style.css`)
+- Cards com efeitos hover
+- Design moderno e limpo
+- Fontes otimizadas
+- Animações suaves
+
+### CSS da Página Welcome
+- Gradientes modernos
+- Cards de marketplace
+- Layout responsivo
+- Comentários detalhados
+
+## Funcionalidades Futuras
+
+### Roadmap
+- [ ] Sistema de pagamento integrado
+- [ ] Busca avançada de produtos
+- [ ] Sistema de avaliações
+- [ ] Gestão de estoque automática
+- [ ] API REST completa
+- [ ] Sistema de favoritos
+- [ ] Histórico de compras
+- [ ] Recuperação de senha
+- [ ] Integração com correios
+
+## Contribuição
+
+1. Fork o projeto
+2. Crie uma branch (`git checkout -b feature/nova-funcionalidade`)
+3. Commit suas mudanças (`git commit -am 'Adiciona nova funcionalidade'`)
+4. Push para a branch (`git push origin feature/nova-funcionalidade`)
+5. Abra um Pull Request
+
+## Licença
+
+Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
+
+## Contato
+
+- **Projeto**: LDM - Moda Feminina
+- **Framework**: Laravel 13
+- **Versão**: 1.0.0
+- **Desenvolvedor**: [Seu Nome]
+
+---
+
+**LDM** - Transformando moda em experiência digital!

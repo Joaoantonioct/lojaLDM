@@ -1,0 +1,205 @@
+/* ==========================================================================
+   MAIS VENDIDOS DA SEMANA (ESTILO ATUALIZADO PREMIUM)
+   ========================================================================== */
+
+.most-wanted-section {
+    padding: 80px 20px;
+    background-color: #ffffff;
+    /* Usa a mesma fonte padrão que você definiu no seu menu */
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.most-wanted-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.section-header {
+    text-align: center;
+    margin-bottom: 50px;
+    position: relative;
+}
+
+.section-header::after {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 2px;
+    background-color: var(--global4); /* Seu preto padrão */
+    margin: 15px auto 0 auto;
+}
+
+.section-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--global4);
+    margin-bottom: 5px;
+}
+
+.section-subtitle {
+    font-size: 0.95rem;
+    color: #666;
+    font-weight: 400;
+}
+
+/* Grade de Produtos */
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 30px;
+}
+
+/* Card de Produto */
+.product-card {
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 10px;
+    transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), 
+                box-shadow 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Efeito de flutuar sutil ao passar o mouse no card inteiro */
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+}
+
+.product-image-wrapper {
+    position: relative;
+    overflow: hidden;
+    background-color: #f8f9fa;
+    aspect-ratio: 3 / 4; /* Proporção ideal para moda e acessórios juntos */
+    border-radius: 6px;
+}
+
+.product-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.product-card:hover .product-image {
+    transform: scale(1.05);
+}
+
+/* Badge "Top" Arredondada e Discreta */
+.badge-tag {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background-color: var(--global4);
+    color: #ffffff;
+    padding: 4px 10px;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+    border-radius: 20px;
+    z-index: 2;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* Botão de Adicionar à Sacola Remodelado */
+.quick-add-btn {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    width: calc(100% - 24px); /* Fica flutuando dentro da imagem, não colado nas bordas */
+    background-color: #ffffff;
+    color: var(--global4);
+    border: none;
+    padding: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 6px;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.3s ease, transform 0.3s ease, background-color 0.2s;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    z-index: 2;
+}
+
+.product-image-wrapper:hover .quick-add-btn {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.quick-add-btn:hover {
+    background-color: var(--global4);
+    color: #ffffff;
+}
+
+/* Informações */
+.product-info {
+    padding: 15px 5px 5px 5px;
+    text-align: left;
+}
+
+.product-category {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: #999;
+    letter-spacing: 0.5px;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.product-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--global4);
+    margin: 0 0 6px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Preços alinhados com o seu estilo global */
+.product-price-container {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 0.95rem;
+}
+
+.current-price {
+    color: var(--global4);
+    font-weight: 700;
+}
+
+.old-price {
+    color: #999;
+    text-decoration: line-through;
+    font-size: 0.85rem;
+}
+
+/* Responsividade Mobile Inteligente */
+@media (max-width: 768px) {
+    .most-wanted-section {
+        padding: 50px 15px;
+    }
+
+    .products-grid {
+        grid-template-columns: repeat(2, 1fr); /* Mantém o grid duplo elegante no celular */
+        gap: 15px;
+    }
+    
+    .section-title {
+        font-size: 1.5rem;
+    }
+
+    .product-card {
+        padding: 5px;
+    }
+
+    /* No celular, o botão "Adicionar" aparece fixo discretamente sem precisar de hover */
+    .quick-add-btn {
+        display: none; 
+    }
+}

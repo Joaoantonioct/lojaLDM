@@ -1,0 +1,42 @@
+/* Estilos principais do layout - Sticky Footer */
+
+/* Reset e configurações básicas */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    height: 100%;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #ffffff;
+    color: #333;
+}
+
+/* Wrapper principal para sticky footer */
+.site-wrapper {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* Área principal que cresce conforme o conteúdo */
+main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Garante que o footer fique sempre no bottom */
+.footer {
+    margin-top: auto;
+    flex-shrink: 0;
+}
+
+/* Classes auxiliares para páginas com pouco conteúdo */
+.min-height-content {
+    /* Removido min-height - usando apenas flexbox */
+    padding-bottom: 250px;
+    /* Espaçamento mínimo antes do footer */
+}

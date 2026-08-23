@@ -1,0 +1,156 @@
+/* Estilos específicos para páginas de visitantes */
+
+.guest-main {
+    background: #f8f9fa;
+    min-height: calc(100vh - 200px);
+    padding: 2rem 0;
+}
+
+/* Container principal para conteúdo de visitantes */
+.guest-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+/* Hero section para visitantes */
+.guest-hero {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 4rem 2rem;
+    text-align: center;
+    border-radius: 12px;
+    margin-bottom: 3rem;
+}
+
+.guest-hero h1 {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    font-weight: 700;
+}
+
+.guest-hero p {
+    font-size: 1.25rem;
+    margin-bottom: 2rem;
+    opacity: 0.9;
+}
+
+.guest-hero .btn-group {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.guest-hero .btn {
+    padding: 0.875rem 2rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: transform 0.2s ease;
+}
+
+.guest-hero .btn-primary {
+    background: white;
+    color: #667eea;
+}
+
+.guest-hero .btn-secondary {
+    background: transparent;
+    color: white;
+    border: 2px solid white;
+}
+
+.guest-hero .btn:hover {
+    transform: translateY(-2px);
+}
+
+/* Features section */
+.guest-features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-bottom: 3rem;
+}
+
+.guest-feature-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    transition: transform 0.2s ease;
+}
+
+.guest-feature-card:hover {
+    transform: translateY(-4px);
+}
+
+.guest-feature-card .icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 1rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.guest-feature-card h3 {
+    color: #333;
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
+}
+
+.guest-feature-card p {
+    color: #666;
+    line-height: 1.6;
+}
+
+/* Call to action section */
+.guest-cta {
+    background: white;
+    padding: 3rem;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.guest-cta h2 {
+    color: #333;
+    margin-bottom: 1rem;
+    font-size: 2rem;
+}
+
+.guest-cta p {
+    color: #666;
+    margin-bottom: 2rem;
+    font-size: 1.1rem;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+    .guest-hero h1 {
+        font-size: 2rem;
+    }
+    
+    .guest-hero p {
+        font-size: 1rem;
+    }
+    
+    .guest-hero {
+        padding: 2rem 1rem;
+    }
+    
+    .guest-features {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+    
+    .guest-cta {
+        padding: 2rem 1rem;
+    }
+}

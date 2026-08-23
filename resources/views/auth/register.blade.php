@@ -1,148 +1,70 @@
-@extends('layouts.main')
+@extends('layouts.guest.guest')
 
-@section('title', 'Criar Conta')
+@section('title', 'Criar Conta - LDM')
 
-@section('conteudo')
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h4 class="text-center">Criar Nova Conta</h4>
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/register.css') }}">
+@endpush
+
+@section('content')
+<div class="register-container">
+    <!-- Card Principal -->
+    <div class="register-card">
+        <!-- Título Principal -->
+        <div class="register-header">
+            <h2 class="register-title">Crie sua conta e aproveite nossas ofertas</h2>
+        </div>
+
+        <!-- Seção de Login Social Google -->
+        <div class="social-login-section">
+            <div class="google-account-item" onclick="window.location.href='{{ route('auth.google') }}'">
+                <div class="google-account-info">
+                    <div class="google-avatar">
+                        <svg viewBox="0 0 24 24" class="google-icon">
+                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                        </svg>
+                    </div>
+                    <div class="google-text">
+                        <div class="google-label">Continuar como João</div>
+                        <div class="google-email">contratoativo.br@gamil.com</div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    @if(session('error'))
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            {{ session('error') }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                    @endif
-                    
-                    <form method="POST" action="{{ route('register.store') }}">
-                        @csrf
-                        
-                        <!-- Dados Pessoais -->
-                        <div class="mb-4">
-                            <h5 class="mb-3">Dados Pessoais</h5>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="nome" class="form-label">Nome Completo</label>
-                                        <input type="text" class="form-control" id="nome" name="nome" required>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="cpf" class="form-label">CPF</label>
-                                        <input type="text" class="form-control" id="cpf" name="cpf" required>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="data_nascimento" class="form-label">Data de Nascimento</label>
-                                        <input type="date" class="form-control" id="data_nascimento" name="data_nascimento">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="telefone" class="form-label">Telefone</label>
-                                        <input type="tel" class="form-control" id="telefone" name="telefone" placeholder="(11) 99999-9999">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Dados de Acesso -->
-                        <div class="mb-4">
-                            <h5 class="mb-3">Dados de Acesso</h5>
-                            <div class="mb-3">
-                                <label for="email" class="form-label">Email</label>
-                                <input type="email" class="form-control" id="email" name="email" required>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="senha" class="form-label">Senha</label>
-                                        <input type="password" class="form-control" id="senha" name="senha" required>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="confirmar_senha" class="form-label">Confirmar Senha</label>
-                                        <input type="password" class="form-control" id="confirmar_senha" name="confirmar_senha" required>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Endereço -->
-                        <div class="mb-4">
-                            <h5 class="mb-3">Endereço de Entrega</h5>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="cep" class="form-label">CEP</label>
-                                        <input type="text" class="form-control" id="cep" name="cep" placeholder="00000-000">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="cidade" class="form-label">Cidade</label>
-                                        <input type="text" class="form-control" id="cidade" name="cidade">
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-8">
-                                    <div class="mb-3">
-                                        <label for="rua" class="form-label">Rua</label>
-                                        <input type="text" class="form-control" id="rua" name="rua">
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="mb-3">
-                                        <label for="numero" class="form-label">Número</label>
-                                        <input type="text" class="form-control" id="numero" name="numero">
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="complemento" class="form-label">Complemento</label>
-                                <input type="text" class="form-control" id="complemento" name="complemento">
-                            </div>
-                        </div>
-                        
-                        <!-- Preferências -->
-                        <div class="mb-4">
-                            <h5 class="mb-3">Preferências</h5>
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" id="receber_newsletter" name="receber_newsletter" checked>
-                                <label class="form-check-label" for="receber_newsletter">
-                                    Desejo receber newsletter e promoções por email
-                                </label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="termos" name="termos" required>
-                                <label class="form-check-label" for="termos">
-                                    Li e aceito os <a href="#" class="text-decoration-none">termos de uso</a> e <a href="#" class="text-decoration-none">política de privacidade</a>
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-person-plus"></i> Criar Conta
-                            </button>
-                            <a href="{{ route('login') }}" class="btn btn-outline-secondary">
-                                <i class="bi bi-box-arrow-in-right"></i> Já tenho uma conta
-                            </a>
-                        </div>
-                    </form>
+                <div class="google-dropdown">
+                    <svg viewBox="0 0 24 24" class="dropdown-icon">
+                        <path fill="#5f6368" d="M7 10l5 5 5-5z"/>
+                    </svg>
                 </div>
             </div>
         </div>
+
+        <!-- Divisor -->
+        <div class="divider">
+            <span>Ou digite seu e-mail</span>
+        </div>
+
+        <!-- Formulário de Email -->
+        <form class="register-form" action="#" method="POST">
+            @csrf
+            
+            <!-- Campo de Email -->
+            <div class="form-group">
+                <label for="email">E-mail</label>
+                <input type="email" id="email" name="email" placeholder="exemplo@email.com" required>
+            </div>
+
+            <!-- Botão de Continuar -->
+            <button type="submit" class="continue-btn">
+                Continuar
+            </button>
+        </form>
+    </div>
+
+    <!-- Link Corporativo (Fora do Card) -->
+    <div class="corporate-link">
+        <p>Você precisa de uma conta para sua empresa? <a href="#">Crie uma conta corporativa</a></p>
     </div>
 </div>
 @endsection

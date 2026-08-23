@@ -1,0 +1,136 @@
+.container_prod{
+   width: 100%;
+    padding: 40px 0;
+    font-family: "Proxima Nova", -apple-system, sans-serif;
+    background-color: rgba(188, 186, 186, 0.11);
+    display: flex;
+    justify-content: center; /* Centraliza o wrapper horizontalmente */
+}
+
+.carousel-wrapper {
+    display: grid;
+    /* Ajusta os cards automaticamente conforme o espaço */
+    grid-template-columns: repeat(auto-fit, 183px); 
+    gap: 16px;
+    
+    /* A MÁGICA ESTÁ AQUI: */
+    width: 95%;           /* Ocupa quase tudo em telas pequenas */
+    max-width: 1200px;    /* Não deixa passar de 1200px em telas grandes */
+    margin: 0 auto;       /* Garante a centralização */
+}
+
+
+.section-title {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto 20px auto;
+    font-size: 24px;
+    font-weight: 400;
+    color: #333;
+    padding: 0 10px;
+}
+
+/* Base do Card */
+.card {
+    min-width: 183px;
+    max-width: 183px;
+    background: #fff;
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 1px 2px 0 rgba(0,0,0,.12);
+    transition: box-shadow 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 4px 12px 0 rgba(0,0,0,.15);
+}
+
+/* Tipografia */
+.card-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 12px 0;
+    line-height: 1.2;
+}
+
+.card-description {
+    font-size: 13px;
+    color: #666;
+    margin: 8px 0;
+    line-height: 1.4;
+}
+
+/* Ícones e Imagens */
+.card-icon img {
+    width: 48px;
+    height: 48px;
+}
+
+.product-image img {
+    width: 100%;
+    height: auto;
+    border-radius: 4px;
+}
+
+/* Links e Botões */
+.card-link {
+    font-size: 13px;
+    color: #3483fa;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.btn-mute {
+    width: 100%;
+    background: rgba(65, 137, 230, .15);
+    color: #3483fa;
+    border: none;
+    padding: 8px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+/* Preços */
+.price-container {
+    margin-top: 8px;
+}
+
+.price-old {
+    text-decoration: line-through;
+    color: #999;
+    font-size: 12px;
+}
+
+.price-current {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.price-value {
+    font-size: 18px;
+    color: #333;
+}
+
+.price-discount {
+    color: #00a650;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.product-name {
+    font-size: 13px;
+    color: #333;
+    text-decoration: none;
+    display: block;
+    margin-top: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
