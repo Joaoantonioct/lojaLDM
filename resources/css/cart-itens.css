@@ -68,6 +68,7 @@
 }
 
 .search-layout.without-filters {
+    width: 100%;
     display: block;
 }
 
@@ -202,11 +203,11 @@
    RESULTADOS
    ========================================================= */
 #produtos {
-    scroll-margin-top: 125px;
+    scroll-margin-top: 0;
 }
 .search-results {
     min-width: 0;
-    scroll-margin-top: 125px;
+    scroll-margin-top: 0;
 }
 
 .results-toolbar {
@@ -313,9 +314,13 @@
     display: grid;
 
     grid-template-columns:
-        repeat(3, minmax(0, 1fr));
+        repeat(4, minmax(0, 1fr));
 
     gap: 16px;
+}
+
+.without-filters .search-product-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 

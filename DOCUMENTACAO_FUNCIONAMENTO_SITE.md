@@ -1,174 +1,148 @@
-# Documentação do funcionamento do site LDM
+# Funcionamento do site LDM
 
 ## 1. Visão geral
 
-O LDM é uma aplicação de catálogo de produtos construída com Laravel 13, PHP, Blade, banco relacional, Vite, CSS e JavaScript. O fluxo atual permite:
+O LDM possui três áreas principais:
 
-- visualizar produtos no catálogo;
-- pesquisar por nome, descrição, SKU, marca ou categoria;
-- cadastrar produtos com marca, categoria, preço, estoque, descrição e imagens;
-- abrir a página de detalhes de um produto específico;
-- visualizar a galeria de imagens e produtos relacionados.
+- **pública:** catálogo, pesquisa e detalhes dos produtos;
+- **autenticação:** cadastro, login e logout;
+- **privada:** área do cliente em `/cliente`.
 
-Carrinho, checkout, pagamento, autenticação e edição ou exclusão de produtos ainda não fazem parte do fluxo implementado.
+Os componentes visuais, como header, footer, carrossel e cards, são compartilhados quando não dependem de autenticação.
 
-## 2. Requisitos e execução
+## 2. Fluxo público
 
-Requisitos mínimos:
+### Página inicial
 
-- PHP 8.3 ou superior;
-- Composer;
-- Node.js e npm;
-- banco de dados configurado no arquivo `.env`.
+`GET /`
 
-Na raiz do projeto:
+1. `LDMcontroller@index` consulta os produtos.
+2. A view `resources/views/public/home.blade.php` monta a página.
+3. `components.catalog-carousel` exibe os banners.
+4. `components.cart-itens` exibe a listagem.
+5. Cada card abre `/product/{id}`.
 
-```bash
-composer install
-npm install
-php artisan migrate
-php artisan storage:link
-npm run build
-php artisan serve
+### Pesquisa
+
+`GET /pesquisa?search=termo`
+
+A busca consulta:
+
+- nome;
+- descrição;
+- SKU;
+- marca;
+- categoria e categoria-pai.
+
+Também aceita filtros por:
+
+- categorias;
+- marcas;
+- preço mínimo e máximo;
+- disponibilidade em estoque.
+
+A pesquisa reutiliza a view pública e os componentes de catálogo.
+
+### Detalhes do produto
+
+`GET /product/{product}`
+
+A página mostra dados do produto, imagens, miniaturas, estoque, descrição e produtos relacionados. O modal de compartilhamento fica separado em:
+
+```text
+resources/views/components/product/share-modal.blade.php
 ```
 
-A aplicação fica disponível em `http://127.0.0.1:8000`.
+## 3. Fluxo de autenticação
 
-Durante o desenvolvimento frontend, use:
+### Cadastro
+
+`GET /register` mostra o formulário.
+
+`POST /register` valida:
+
+- nome obrigatório;
+- e-mail válido e único;
+- senha com pelo menos 8 caracteres;
+- confirmação da senha.
+
+Depois de criar o usuário, o sistema:
+
+1. grava os dados em `users`;
+2. aplica hash na senha pelo model `User`;
+3. inicia a sessão;
+4. regenera o ID da sessão;
+5. redireciona para `/cliente`.
+
+### Login
+
+`GET /login` mostra o formulário.
+
+`POST /login` usa `Auth::attempt`. Se as credenciais estiverem corretas, o sistema regenera a sessão e redireciona para `/cliente`.
+
+### Logout
+
+`POST /logout` encerra a sessão, invalida os dados de sessão, regenera o token CSRF e redireciona para `/`.
+
+## 4. Área privada do cliente
+
+`GET /cliente`
+
+Essa rota usa o middleware `auth`. Usuários não autenticados são direcionados ao login.
+
+A página usa:
+
+```text
+resources/views/layouts/customer.blade.php
+resources/views/customer/dashboard.blade.php
+resources/css/client.css
+```
+
+O dashboard reutiliza o carrossel e a listagem de produtos, mas seu layout pertence à área privada.
+
+## 5. Cadastro de produtos
+
+### Formulário
+
+`GET /pagina/add`
+
+### Gravação
+
+`POST /pagina/add`
+
+O controller valida produto, marca, categoria, preço, estoque, descrição e imagens. A gravação usa transação:
+
+```text
+Product
+ProductImage
+```
+
+As imagens são guardadas em:
+
+```text
+storage/app/public/products/{id}
+```
+
+Para torná-las acessíveis pelo navegador:
+
+```bash
+php artisan storage:link
+```
+
+## 6. Assets frontend
+
+O Vite compila os arquivos CSS e JavaScript usados pelas views.
+
+Durante o desenvolvimento:
 
 ```bash
 npm run dev
 ```
 
-## 3. Fluxos principais
-
-### 3.1 Página inicial
-
-URL: `/`
-
-1. A requisição chega ao método `index()` de `LDMcontroller`.
-2. O controller consulta os produtos com categoria, marca e imagens.
-3. A view `welcome.blade.php` monta o catálogo.
-4. O componente `components/cart-itens.blade.php` mostra a imagem principal do banco.
-5. Se o produto não tiver imagem cadastrada, é usada uma imagem de fallback em `public/img/toddy.jpg`.
-6. O botão `Ver produto` aponta para `/product/{id}`.
-
-### 3.2 Busca de produtos
-
-URL: `/pesquisa?search=termo`
-
-A busca procura o termo em:
-
-- `product.name`;
-- `product.description`;
-- `product.sku`;
-- `brands.name`;
-- `categories.name`.
-
-A consulta considera apenas produtos com `active = true` e carrega as relações `category`, `brand` e `images`. Os resultados são exibidos na view `welcome.blade.php`, usando o mesmo componente do catálogo.
-
-### 3.3 Cadastro de produto
-
-Tela: `GET /pagina/add`
-
-O controller carrega as marcas e categorias disponíveis e envia esses dados para `pagina/add.blade.php`.
-
-Envio: `POST /pagina/add`
-
-Campos principais:
-
-| Campo | Obrigatório | Regra |
-|---|---:|---|
-| `name` | Sim | Texto com até 100 caracteres |
-| `brand_id` | Sim | Deve existir em `brands` |
-| `category_id` | Sim | Deve existir em `categories` |
-| `price` | Sim | Número maior ou igual a zero |
-| `qty` | Sim | Inteiro maior ou igual a zero |
-| `description` | Sim | Texto |
-| `private` | Sim | Booleano |
-| `images[]` | Não | Até 10 imagens JPG, PNG ou WEBP, com até 5 MB cada |
-
-Após a validação:
-
-1. O slug é gerado automaticamente.
-2. O produto é criado na tabela `product`.
-3. Cada imagem é salva no disco `public`, em `storage/app/public/products/{id}`.
-4. Cada arquivo gera um registro em `product_images`.
-5. A primeira imagem recebe `is_main = true` e `position = 0`.
-6. O usuário retorna para `/` com uma mensagem de sucesso.
-
-Para exibir os arquivos no navegador, o link simbólico deve existir:
+Para produção:
 
 ```bash
-php artisan storage:link
+npm run build
 ```
 
-### 3.4 Página de detalhes
-
-URL principal: `/product/{product}`
-
-O ID do produto é resolvido pelo model binding do Laravel. O controller carrega:
-
-- produto;
-- categoria;
-- marca;
-- imagens ordenadas pela imagem principal e pela posição;
-- até três produtos ativos da mesma categoria.
-
-A view `pagina/detallsProducts.blade.php` mostra:
-
-- nome, preço, SKU e descrição;
-- marca, categoria e estoque;
-- imagem principal;
-- miniaturas das demais imagens;
-- produtos relacionados.
-
-O arquivo `resources/js/detallsProducts.js` troca a imagem principal quando uma miniatura é selecionada. O CSS da tela fica em `resources/css/detalssProducts.css`.
-
-A URL antiga `/pagina/detallsProducts` continua disponível. Quando acessada sem um produto, ela usa o primeiro produto ativo cadastrado.
-
-## 4. Banco de dados
-
-As principais tabelas são:
-
-- `users`: usuários padrão do Laravel;
-- `categories`: categorias dos produtos;
-- `brands`: marcas dos produtos;
-- `product`: dados principais do produto;
-- `product_images`: imagens relacionadas ao produto;
-- `product_variants`: variações de produto;
-- `cache`, `cache_locks` e `jobs`: recursos internos do Laravel.
-
-Relações principais:
-
-- uma categoria possui muitos produtos;
-- uma marca possui muitos produtos;
-- um produto pertence a uma categoria;
-- um produto pertence opcionalmente a uma marca;
-- um produto possui muitas imagens;
-- uma imagem pertence a um produto;
-- um produto possui muitas variantes.
-
-## 5. Validação e segurança
-
-O cadastro utiliza:
-
-- token CSRF com `@csrf`;
-- validação no controller;
-- validação de existência de marca e categoria;
-- validação de tipo e tamanho dos arquivos;
-- `$fillable` nos models;
-- transação de banco para criar produto e imagens juntos;
-- armazenamento público controlado pelo filesystem do Laravel.
-
-## 6. Funcionalidades ainda pendentes
-
-- autenticação de clientes e administradores;
-- carrinho funcional;
-- checkout e pagamento;
-- pedidos e histórico de compras;
-- edição e exclusão de produtos;
-- filtros avançados;
-- seleção de quantidade na compra;
-- gerenciamento de imagens já cadastradas;
-- avaliações reais de produtos.
+O layout público e o layout do cliente carregam apenas os assets relacionados às suas áreas, enquanto componentes compartilhados continuam disponíveis nos dois fluxos.

@@ -19,8 +19,7 @@
     position: absolute;
     inset: 0;
 
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
 
     align-items: center;
 
@@ -32,6 +31,14 @@
     transition:
         opacity .5s ease,
         visibility .5s ease;
+}
+
+.carousel-slide::after {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(90deg, rgba(0, 0, 0, .62), rgba(0, 0, 0, .18) 62%, rgba(0, 0, 0, .04));
+    content: '';
 }
 
 .carousel-slide.active {
@@ -58,7 +65,7 @@
     text-transform: uppercase;
     letter-spacing: 1px;
 
-    color: #16803c;
+    color: #b8f2c8;
 }
 
 .carousel-content h1 {
@@ -67,7 +74,7 @@
     font-size: clamp(32px, 4vw, 52px);
     line-height: 1.05;
 
-    color: #171717;
+    color: #fff;
 }
 
 .carousel-content p {
@@ -78,7 +85,7 @@
     font-size: 17px;
     line-height: 1.6;
 
-    color: #5f6368;
+    color: rgba(255, 255, 255, .9);
 }
 
 
@@ -115,21 +122,16 @@
 /* IMAGEM */
 
 .carousel-image {
-    width: 100%;
-    height: 100%;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    position: absolute;
+    inset: 0;
+    z-index: 0;
 }
 
 .carousel-image img {
     width: 100%;
     height: 100%;
 
-    object-fit: contain;
-
-    border-radius: 18px;
+    object-fit: cover;
 }
 
 
@@ -230,8 +232,6 @@
     }
 
     .carousel-slide {
-        grid-template-columns: 1fr;
-
         padding: 35px 25px 55px;
 
         text-align: center;
@@ -250,9 +250,7 @@
     }
 
     .carousel-image {
-        height: 180px;
-
-        margin-top: 20px;
+        position: absolute;
     }
 
     .carousel-button {

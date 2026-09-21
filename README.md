@@ -1,58 +1,113 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# LDM
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Catálogo de produtos desenvolvido com Laravel, Blade, Eloquent, Vite, CSS e JavaScript.
 
-## About Laravel
+## Funcionalidades atuais
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- catálogo público de produtos;
+- pesquisa por nome, descrição, SKU, marca e categoria;
+- filtros por categoria, marca, preço e estoque;
+- ordenação dos cards por preço;
+- página de detalhes com galeria e produtos relacionados;
+- cadastro de produtos e imagens;
+- cadastro e login de clientes;
+- área privada do cliente em `/cliente`;
+- logout com retorno para a área pública;
+- carrossel de banners;
+- modal de compartilhamento do produto.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Organização principal
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+```text
+app/
+├── Http/Controllers/
+│   ├── AuthController.php
+│   └── LDMcontroller.php
+└── Models/
 
-## Learning Laravel
+resources/
+├── views/
+│   ├── public/                 # catálogo público
+│   ├── customer/               # área autenticada do cliente
+│   ├── auth/                   # login e cadastro
+│   ├── components/             # partes reutilizáveis
+│   ├── layouts/                # layouts público e privado
+│   └── partials/               # header, navbar e footer
+├── css/
+└── js/
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+routes/web.php                 # rotas web atuais
+database/migrations/           # estrutura do banco
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+## Executar localmente
 
-## Contributing
+Requisitos:
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+- PHP 8.3 ou superior;
+- Composer;
+- Node.js e npm;
+- banco configurado no `.env`.
 
-## Code of Conduct
+```bash
+composer install
+npm install
+php artisan migrate
+php artisan storage:link
+npm run dev
+php artisan serve
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Abra `http://127.0.0.1:8000`.
 
-## Security Vulnerabilities
+Para gerar os assets de produção:
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```bash
+npm run build
+```
 
-## License
+## Autenticação
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Rotas principais:
+
+| Método | URL | Ação |
+|---|---|---|
+| GET | `/register` | formulário de cadastro |
+| POST | `/register` | cria o usuário |
+| GET | `/login` | formulário de login |
+| POST | `/login` | autentica o usuário |
+| POST | `/logout` | encerra a sessão |
+| GET | `/cliente` | área privada do cliente |
+
+Após criar a conta ou fazer login, o cliente é enviado para `/cliente`. A senha é armazenada com hash pelo cast do model `User`.
+
+## Fluxo público e privado
+
+- `resources/views/public`: catálogo e pesquisa acessíveis sem login;
+- `resources/views/customer`: páginas que exigem autenticação;
+- `resources/views/auth`: login e cadastro;
+- `resources/views/components`: componentes compartilhados entre áreas.
+
+A rota `/cliente` usa o middleware `auth`. As rotas de login e cadastro usam `guest`.
+
+## Banco de dados
+
+As migrations principais criam:
+
+- `users`, `password_reset_tokens` e `sessions`;
+- `categories` e `brands`;
+- `product`;
+- `product_images`;
+- `product_variants`.
+
+As imagens são armazenadas em `storage/app/public` e exibidas pelo link `public/storage`.
+
+## Validação rápida
+
+```bash
+php artisan route:list
+php artisan view:cache
+php artisan migrate:status
+npm run build
+php artisan test
+```

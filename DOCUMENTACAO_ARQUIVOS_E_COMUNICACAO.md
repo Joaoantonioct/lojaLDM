@@ -12,20 +12,55 @@ routes/web.php
    |
    v
 app/Http/Controllers/LDMcontroller.php
-   |
+| `GET` | `/` | `LDMcontroller@index` | Home pública |
+| `GET` | `/login` | `AuthController@showLogin` | Formulário de login |
+| `POST` | `/login` | `AuthController@login` | Autentica cliente |
+| `GET` | `/register` | `AuthController@showRegister` | Formulário de cadastro |
+| `POST` | `/register` | `AuthController@register` | Cria cliente |
+| `POST` | `/logout` | `AuthController@logout` | Encerra sessão |
+| `GET` | `/cliente` | `LDMcontroller@client` | Área privada do cliente |
    +--> app/Models/*.php --> Banco de dados
+| `GET` | `/pesquisa` | closure com `Product` | Busca pública de produtos |
    |
    v
-resources/views/**/*.blade.php
+ envia `$dados` e `$pesquisa` para `public/home.blade.php`.
+
+#### `client()`
+
+- consulta produtos ativos;
+- envia os dados para `customer/dashboard.blade.php`;
+- é acessado somente com o middleware `auth`.
+
+### `app/Http/Controllers/AuthController.php`
+
+Controla cadastro, login e logout.
+
+- `showRegister()` exibe o cadastro;
+- `register()` valida e cria o usuário;
+- `showLogin()` exibe o login;
+- `login()` autentica por e-mail e senha;
+- `logout()` encerra a sessão e retorna à área pública.
    |
-   +--> resources/css/*.css
+### `resources/views/layouts/public.blade.php`
+
+Layout das páginas públicas. Inclui:
    +--> resources/js/*.js
-```
+Página pública principal do catálogo. Recebe `$dados` e `$pesquisa`, inclui o carrossel e o componente de produtos.
+
+### `resources/views/customer/dashboard.blade.php`
+
+Dashboard privado do cliente. Exibe atalhos da conta, carrossel e catálogo reutilizado.
+
+### `resources/views/auth/login.blade.php` e `register.blade.php`
+
+Formulários de entrada e criação de conta. Ambos enviam requisições com CSRF e mostram erros de validação.
 
 O Vite compila os arquivos frontend e disponibiliza o resultado em `public/build`.
 
 ## 2. Rotas e entradas da aplicação
 
+
+O componente reutiliza subcomponentes em `resources/views/components/catalog` para filtros, barra de resultados e estado vazio.
 ### `routes/web.php`
 
 Registra as rotas web e conecta URLs às ações correspondentes.
@@ -53,7 +88,7 @@ A rota `/product/{product}` utiliza model binding: o valor da URL é convertido 
 
 - consulta `Product`;
 - carrega `category`, `brand` e `images`;
-- envia `$dados` e `$pesquisa` para `welcome.blade.php`.
+- envia `$dados` e `$pesquisa` para `public/home.blade.php`.
 
 #### `add()`
 
@@ -118,18 +153,30 @@ Representa `product_variants` e pertence a um produto. O campo `attributes` é c
 
 ## 5. Views e comunicação com o backend
 
-### `resources/views/layouts/main.blade.php`
+### `resources/views/layouts/public.blade.php`
 
-Layout compartilhado. Inclui:
+Layout das páginas públicas. Inclui:
 
 - cabeçalho;
 - conteúdo da página com `@yield('content')`;
 - rodapé;
 - entradas do Vite.
 
-### `resources/views/welcome.blade.php`
+### `resources/views/layouts/customer.blade.php`
 
-Página principal do catálogo. Recebe `$dados` e `$pesquisa`, inclui o componente de produtos e mostra mensagens de sucesso.
+Layout da área privada do cliente. Reutiliza header e footer, mas organiza os assets da área autenticada.
+
+### `resources/views/public/home.blade.php`
+
+Página principal pública do catálogo. Recebe `$dados` e `$pesquisa`, inclui o carrossel e o componente de produtos.
+
+### `resources/views/customer/dashboard.blade.php`
+
+Dashboard privado do cliente. Exibe atalhos da conta, carrossel e catálogo reutilizado.
+
+### `resources/views/auth/login.blade.php` e `register.blade.php`
+
+Formulários de login e cadastro. Usam CSRF e exibem erros de validação.
 
 ### `resources/views/components/cart-itens.blade.php`
 

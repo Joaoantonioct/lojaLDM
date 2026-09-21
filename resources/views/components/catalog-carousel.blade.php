@@ -57,7 +57,7 @@
             </div>
 
             <div class="carousel-image">
-                <img src="/img/bannerpapelaria.png" alt="Produtos em promoção">
+                <img src="/img/roupascarrossel.png" alt="Produtos em promoção">
             </div>
 
         </article>
@@ -87,7 +87,7 @@
             </div>
 
             <div class="carousel-image">
-                <img src="/img/bannerpapelaria.png" alt="Novidades do catálogo">
+                <img src="/img/acessorioscarrossel.png" alt="Novidades do catálogo">
             </div>
 
         </article>

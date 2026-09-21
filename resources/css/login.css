@@ -1,0 +1,125 @@
+.login-page {
+    display: grid;
+    min-height: 70vh;
+    place-items: center;
+    padding: 48px 20px;
+    background: #f3f4f6;
+}
+
+.login-panel {
+    width: min(420px, 100%);
+    padding: 34px;
+    border: 1px solid #e1e5ea;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 16px 35px rgba(31, 41, 51, .1);
+}
+
+.login-kicker {
+    color: #16803c;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.login-heading h1 {
+    margin: 8px 0;
+    color: #20252b;
+    font-size: 28px;
+}
+
+.login-heading p {
+    margin: 0 0 24px;
+    color: #697586;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.login-error {
+    margin-bottom: 16px;
+    padding: 11px 12px;
+    border: 1px solid #f0b8b8;
+    border-radius: 5px;
+    background: #fff4f4;
+    color: #a33131;
+    font-size: 13px;
+}
+
+.login-form {
+    display: grid;
+    gap: 8px;
+}
+
+.login-form label {
+    color: #39424e;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.login-form input[type="email"],
+.login-form input[type="password"] {
+    width: 100%;
+    min-height: 44px;
+    margin-bottom: 10px;
+    padding: 0 12px;
+    border: 1px solid #cfd6de;
+    border-radius: 5px;
+    color: #20252b;
+    font: inherit;
+    box-sizing: border-box;
+}
+
+.login-form input:focus {
+    border-color: #2878e8;
+    outline: 2px solid rgba(40, 120, 232, .15);
+}
+
+.login-remember {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 2px 0 14px;
+    font-weight: 400 !important;
+}
+
+.login-remember input {
+    accent-color: #2878e8;
+}
+
+.login-form button {
+    min-height: 44px;
+    border: 0;
+    border-radius: 5px;
+    background: #2878e8;
+    color: #fff;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+}
+
+.login-form button:hover {
+    background: #1768d2;
+}
+
+.login-secondary-link {
+    margin: 20px 0 0;
+    color: #697586;
+    font-size: 13px;
+    text-align: center;
+}
+
+.login-secondary-link a {
+    color: #2878e8;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.login-secondary-link a:hover {
+    text-decoration: underline;
+}
+
+.login-error ul {
+    margin: 0;
+    padding-left: 18px;
+}

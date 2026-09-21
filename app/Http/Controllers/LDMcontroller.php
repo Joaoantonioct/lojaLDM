@@ -17,9 +17,25 @@ class LDMcontroller extends Controller
     {
         $dados = Product::with(['category', 'brand', 'images'])->get();
 
-        return view('welcome', [
+        return view('public.home', [
             'dados' => $dados,
             'pesquisa' => null,
+        ]);
+    }
+
+    public function client()
+    {
+        $dados = Product::with(['category', 'brand', 'images'])
+            ->where('active', true)
+            ->get();
+
+        return view('customer.dashboard', [
+            'dados' => $dados,
+            'pesquisa' => null,
+            'favoritosCount' => 0,
+            'cartCount' => 0,
+            'recentCount' => 0,
+            'ordersCount' => 0,
         ]);
     }
 

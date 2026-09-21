@@ -18,7 +18,7 @@
             </li>
 
             <li>
-                <a href="/product/5">
+                <a href="{{ route('pesquisa') }}#produtos">
                     Produto
                 </a>
             </li>
@@ -34,13 +34,19 @@
         </ul>
 
         <div class="action-links nav-actions">
-            <a href="#" class="action-item">
-                <span>Crie a sua conta</span>
-            </a>
+            @guest
+                <a href="{{ route('register') }}" class="action-item">
+                    <span>Crie a sua conta</span>
+                </a>
 
-            <a href="#" class="action-item">
-                <span>Entre</span>
-            </a>
+                <a href="{{ route('login') }}" class="action-item">
+                    <span>Entre</span>
+                </a>
+            @else
+                <a href="{{ route('cliente') }}" class="action-item">
+                    <span>Minha conta</span>
+                </a>
+            @endguest
 
             <a href="#" class="action-item">
                 <span>Compras</span>
@@ -50,6 +56,13 @@
                 <img src="{{ asset('img/carrinho.png') }}" alt="Carrinho">
                 <span class="badge">3</span>
             </a>
+
+            @auth
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button type="submit" class="action-item action-logout">Sair</button>
+                </form>
+            @endauth
         </div>
 
     </div>

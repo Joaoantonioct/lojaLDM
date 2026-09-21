@@ -1,11 +1,26 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\LDMcontroller;
 use App\Models\Category;
 use App\Models\Product;
 
-Route::get('/', [LDMcontroller::class, 'index']);
+Route::get('/', [LDMcontroller::class, 'index'])->name('home');
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [AuthController::class, 'login'])->name('login.store');
+    Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
+    Route::post('/register', [AuthController::class, 'register'])->name('register.store');
+});
+
+Route::post('/logout', [AuthController::class, 'logout'])
+    ->middleware('auth')
+    ->name('logout');
+
+Route::get('/cliente', [LDMcontroller::class, 'client'])
+    ->middleware('auth')
+    ->name('cliente');
 Route::get('/pagina/detallsProducts', [LDMcontroller::class, 'detalls']);
 Route::get('/product/{product}', [LDMcontroller::class, 'detalls'])->name('product.show');
 Route::get('/pagina/add', [LDMcontroller::class, 'add']);
@@ -82,7 +97,7 @@ Route::get('/pesquisa', function () {
 
     $dados = $consultaBase->get();
 
-    return view('welcome', [
+    return view('public.home', [
         'pesquisa' => $pesquisa,
         'dados' => $dados,
         'categorias' => $categorias,

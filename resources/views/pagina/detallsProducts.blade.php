@@ -15,7 +15,11 @@
 
     <nav class="product-breadcrumbs" aria-label="Navegação estrutural">
         <span><a href="{{ url('/') }}">Voltar à lista</a> &nbsp;|&nbsp; {{ $product->category?->name ?? 'Produtos' }} &nbsp;&gt;&nbsp; {{ $product->name }}</span>
-        <span><a href="{{ url('/pagina/add') }}">Vender um igual</a> &nbsp;&nbsp; Compartilhar</span>
+        <span>
+            <button class="product-share-trigger" type="button" aria-haspopup="dialog" aria-controls="share-product-modal">
+                Compartilhar
+            </button>
+        </span>
     </nav>
 
     <section class="product-main">
@@ -57,4 +61,6 @@
         </div>
     </section>
 </main>
+
+@include('components.product.share-modal', ['product' => $product])
 @endsection
