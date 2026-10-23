@@ -1,4 +1,5 @@
 import './catalog-carousel.js';
+import './cart-header.js';
 
 const category = document.querySelector('.nav-category');
 const categoryToggle = document.querySelector('.nav-category-toggle');

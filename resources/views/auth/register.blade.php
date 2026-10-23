@@ -23,6 +23,7 @@
 
         <form class="login-form" method="POST" action="{{ route('register.store') }}">
             @csrf
+            <input type="hidden" name="redirect" value="{{ old('redirect', request('redirect')) }}">
 
             <label for="name">Nome</label>
             <input id="name" name="name" type="text" value="{{ old('name') }}" autocomplete="name" required autofocus>
@@ -40,7 +41,7 @@
         </form>
 
         <p class="login-secondary-link">
-            Já possui uma conta? <a href="{{ route('login') }}">Entrar</a>
+            Já possui uma conta? <a href="{{ route('login', request()->filled('redirect') ? ['redirect' => request('redirect')] : []) }}">Entrar</a>
         </p>
     </section>
 </main>

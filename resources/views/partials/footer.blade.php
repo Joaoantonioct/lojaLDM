@@ -5,13 +5,13 @@
         <!-- SOBRE A LOJA -->
         <div class="footer-column">
 
-            <div class="footer-logo">
-                SUA<span>LOJA</span>
-            </div>
+            <a class="footer-brand-logos" href="{{ route('home') }}" aria-label="LDM, página inicial">
+                <img class="footer-main-logo" src="{{ asset('img/logo1.png') }}" alt="Logo LDM">
+                <img class="footer-partner-logo" src="{{ asset('img/michele1.png') }}" alt="Logo Michele Aguilar">
+            </a>
 
             <p class="footer-description">
-                Encontre os melhores produtos em um só lugar.
-                Qualidade, praticidade e segurança para você.
+                LDM: produtos para facilitar o seu dia a dia.
             </p>
 
             <div class="social-links">
@@ -40,19 +40,19 @@
 
             <ul>
                 <li>
-                    <a href="/">Home</a>
+                    <a href="{{ route('home') }}">Home</a>
                 </li>
 
                 <li>
-                    <a href="#">Produtos</a>
+                    <a href="{{ route('pesquisa', ['search' => '']) }}">Todos os produtos</a>
                 </li>
 
                 <li>
-                    <a href="#">Categorias</a>
+                    <a href="{{ route('pesquisa', ['search' => '']) }}">Categorias</a>
                 </li>
 
                 <li>
-                    <a href="#">Ofertas</a>
+                    <a href="{{ route('pesquisa', ['search' => '']) }}">Ofertas</a>
                 </li>
             </ul>
 
@@ -66,19 +66,19 @@
 
             <ul>
                 <li>
-                    <a href="#">Fale Conosco</a>
+                    <a href="{{ url('/contato') }}">Fale Conosco</a>
                 </li>
 
                 <li>
-                    <a href="#">Perguntas Frequentes</a>
+                    <a href="{{ url('/contato') }}">Perguntas Frequentes</a>
                 </li>
 
                 <li>
-                    <a href="#">Trocas e Devoluções</a>
+                    <a href="{{ url('/contato') }}">Trocas e Devoluções</a>
                 </li>
 
                 <li>
-                    <a href="#">Política de Privacidade</a>
+                    <a href="{{ url('/contato') }}">Política de Privacidade</a>
                 </li>
             </ul>
 
@@ -117,7 +117,7 @@
         <div class="footer-bottom-container">
 
             <p>
-                © {{ date('Y') }} SUA LOJA. Todos os direitos reservados.
+                © {{ date('Y') }} LDM. Todos os direitos reservados.
             </p>
 
             <div class="payment-methods">

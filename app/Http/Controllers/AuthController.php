@@ -31,7 +31,7 @@ class AuthController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect()->route('cliente');
+        return $this->redirectAfterAuthentication($request);
     }
 
     public function login(Request $request)
@@ -44,12 +44,12 @@ class AuthController extends Controller
         if (!Auth::attempt($credentials, $request->boolean('remember'))) {
             return back()
                 ->withErrors(['email' => 'E-mail ou senha inválidos.'])
-                ->withInput($request->only('email', 'remember'));
+                ->withInput($request->only('email', 'remember', 'redirect'));
         }
 
         $request->session()->regenerate();
 
-        return redirect()->route('cliente');
+        return $this->redirectAfterAuthentication($request);
     }
 
     public function logout(Request $request)
@@ -60,5 +60,16 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()->route('home');
+    }
+
+    private function redirectAfterAuthentication(Request $request)
+    {
+        $destination = $request->input('redirect');
+
+        if (is_string($destination) && preg_match('#\A/product/[0-9]+\z#', $destination)) {
+            return redirect()->to($destination);
+        }
+
+        return redirect()->route('cliente');
     }
 }

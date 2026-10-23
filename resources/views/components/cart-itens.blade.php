@@ -39,6 +39,7 @@
 
                     <article
                         class="search-product-card"
+                        data-product-id="{{ $dado->id }}"
                         data-price="{{ $dado->price }}"
                     >
 
@@ -46,102 +47,22 @@
                             $imagemPrincipal = $dado->images->firstWhere('is_main', true) ?? $dado->images->first();
                         @endphp
 
-                        {{-- IMAGEM --}}
-                        <div class="search-product-image">
-
-                            <img
-                                src="{{ $imagemPrincipal ? asset('storage/'.$imagemPrincipal->image) : asset('img/toddy.jpg') }}"
-                                alt="{{ $dado->name }}"
-                            >
-
-                        </div>
-
-
-                        {{-- INFORMAÇÕES --}}
-                        <div class="search-product-info">
-
-
-                            {{-- CATEGORIA --}}
-                            @if($dado->category)
-
-                                <span class="search-product-category">
-                                    {{ $dado->category->name }}
-                                </span>
-
-                            @endif
-
-
-                            {{-- NOME --}}
-                            <h2 class="search-product-name">
-
-                                {{ $dado->name }}
-
-                            </h2>
-
-
-                            {{-- MARCA --}}
-                            @if($dado->brand)
-
-                                <p class="search-product-brand">
-
-                                    Marca:
-
-                                    <strong>
-                                        {{ $dado->brand->name }}
-                                    </strong>
-
-                                </p>
-
-                            @endif
-
-
-                            {{-- DESCRIÇÃO --}}
-                            @if($dado->description)
-
-                                <p class="search-product-description">
-
-                                    {{ $dado->description }}
-
-                                </p>
-
-                            @endif
-
-
-                            {{-- ESTOQUE --}}
-                            <div class="search-product-stock">
-
-                                @if($dado->qty > 0)
-
-                                    <span class="stock-available">
-                                        Em estoque
-                                    </span>
-
-                                    <span>
-                                        {{ $dado->qty }} unidades
-                                    </span>
-
-                                @else
-
-                                    <span class="stock-unavailable">
-                                        Produto indisponível
-                                    </span>
-
-                                @endif
-
+                        <a href="{{ route('product.show', $dado) }}" class="search-product-link">
+                            <div class="search-product-image">
+                                <img
+                                    src="{{ $imagemPrincipal ? asset('storage/'.$imagemPrincipal->image) : asset('img/toddy.jpg') }}"
+                                    alt="{{ $dado->name }}"
+                                    loading="lazy"
+                                >
                             </div>
-
-
-                            {{-- BOTÃO --}}
-                            <a
-                                href="{{ url('/product/' . $dado->id) }}"
-                                class="search-product-button"
-                            >
-                                Ver produto
-                                <span>→</span>
-                            </a>
-
-
-                        </div>
+                            <div class="search-product-info">
+                                <h2 class="search-product-name">{{ $dado->name }}</h2>
+                                <span class="search-product-price">R$ {{ number_format((float) $dado->price, 2, ',', '.') }}</span>
+                                <span class="search-product-stock {{ $dado->qty > 0 ? 'is-available' : 'is-unavailable' }}">
+                                    {{ $dado->qty > 0 ? 'Em estoque' : 'Indisponível' }}
+                                </span>
+                            </div>
+                        </a>
 
                     </article>
 

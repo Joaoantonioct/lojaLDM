@@ -17,12 +17,15 @@
         'resources/js/app.js',
         'resources/js/cart-itens.js',
     ])
+    @stack('styles')
 </head>
-<body>
+<body data-cart-owner="{{ auth()->id() ?? 'guest' }}">
     @include('partials.header')
 
     @yield('content')
 
     @include('partials.footer')
+
+    @stack('scripts')
 </body>
 </html>

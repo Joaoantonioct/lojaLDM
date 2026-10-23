@@ -16,9 +16,10 @@
         'resources/css/cart-itens.css',
         'resources/js/app.js',
         'resources/js/cart-itens.js',
+        'resources/js/client.js',
     ])
 </head>
-<body>
+<body data-cart-owner="{{ auth()->id() ?? 'guest' }}">
     @include('partials.header')
 
     @yield('content')

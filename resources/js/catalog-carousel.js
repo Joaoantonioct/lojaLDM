@@ -6,6 +6,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const previousButton = document.querySelector('.carousel-prev');
     const nextButton = document.querySelector('.carousel-next');
 
+    if (!slides.length || !dots.length || !previousButton || !nextButton) {
+        return;
+    }
+
     let currentSlide = 0;
 
     function showSlide(index) {

@@ -3,63 +3,87 @@
 @section('title', 'Área do cliente | LDM')
 
 @section('content')
-<main class="client-page">
+<main class="client-page" data-client-id="{{ auth()->id() }}">
     <section class="client-hero" aria-label="Área do cliente">
         @include('components.catalog-carousel')
 
-        <div class="client-shortcuts" aria-label="Atalhos do cliente">
-            <a class="client-shortcut" href="#favoritos">
+        <div class="client-shortcuts-viewport">
+            <button class="client-shortcuts-button client-shortcuts-prev" type="button" aria-label="Atalhos anteriores">
+                &#10094;
+            </button>
+
+            <div class="client-shortcuts" aria-label="Atalhos do cliente">
+                <a class="client-shortcut" href="#favoritos" data-shortcut="favorites">
                 <span class="client-shortcut-title">Favoritos</span>
-                <span class="client-shortcut-icon">&#9825;</span>
-                <span class="client-shortcut-value">{{ $favoritosCount ?? 0 }}</span>
-            </a>
+                <span class="client-shortcut-icon" data-shortcut-preview="favorites" aria-hidden="true">&#9825;</span>
+                <span class="client-shortcut-note" data-shortcut-note="favorites">Nenhum favorito salvo</span>
+                <span class="client-shortcut-value" data-shortcut-value="favorites">0 produtos</span>
+                </a>
 
-            <a class="client-shortcut" href="#interessados">
+                <a class="client-shortcut" href="{{ route('pesquisa') }}" data-shortcut="searches">
                 <span class="client-shortcut-title">Também interessa</span>
-                <span class="client-shortcut-icon">&#9734;</span>
-                <span class="client-shortcut-value">{{ $dados->take(1)->count() }}</span>
-            </a>
+                <span class="client-shortcut-icon" data-shortcut-preview="searches" aria-hidden="true">&#9734;</span>
+                <span class="client-shortcut-note" data-shortcut-note="searches"></span>
+                <span class="client-shortcut-value" data-shortcut-value="searches">0 buscas</span>
+                </a>
 
-            <a class="client-shortcut" href="#carrinho">
+                <a class="client-shortcut" href="#carrinho" data-shortcut="cart">
                 <span class="client-shortcut-title">Carrinho</span>
-                <span class="client-shortcut-icon">&#128722;</span>
-                <span class="client-shortcut-value">{{ $cartCount ?? 0 }} itens</span>
-            </a>
+                <span class="client-shortcut-icon" data-shortcut-preview="cart" aria-hidden="true">&#128722;</span>
+                <span class="client-shortcut-note" data-shortcut-note="cart"></span>
+                <span class="client-shortcut-value" data-shortcut-value="cart">0 itens</span>
+                </a>
 
-            <a class="client-shortcut" href="#recentes">
+                <a class="client-shortcut" href="#recentes" data-shortcut="recent">
                 <span class="client-shortcut-title">Visto recentemente</span>
-                <span class="client-shortcut-icon">&#8634;</span>
-                <span class="client-shortcut-value">{{ $recentCount ?? 0 }}</span>
-            </a>
+                <span class="client-shortcut-icon" data-shortcut-preview="recent" aria-hidden="true">&#8634;</span>
+                <span class="client-shortcut-note" data-shortcut-note="recent"></span>
+                <span class="client-shortcut-value" data-shortcut-value="recent">0 produtos</span>
+                </a>
 
-            <a class="client-shortcut" href="{{ route('pesquisa') }}">
+                <a class="client-shortcut" href="{{ route('pesquisa') }}">
                 <span class="client-shortcut-title">Sua busca</span>
                 <span class="client-shortcut-icon">&#128269;</span>
                 <span class="client-shortcut-value">Pesquisar</span>
-            </a>
+                </a>
 
-            <a class="client-shortcut" href="#compras">
+                <a class="client-shortcut" href="#compras">
                 <span class="client-shortcut-title">Compras</span>
                 <span class="client-shortcut-icon">&#128230;</span>
                 <span class="client-shortcut-value">{{ $ordersCount ?? 0 }} pedidos</span>
-            </a>
+                </a>
+            </div>
+
+            <button class="client-shortcuts-button client-shortcuts-next" type="button" aria-label="Próximos atalhos">
+                &#10095;
+            </button>
         </div>
     </section>
 
-    <section class="client-products" id="produtos">
+    <section class="client-favorites" id="favoritos" data-favorites-section hidden aria-labelledby="favorites-title">
+        <div class="client-products-heading">
+            <div>
+                <span class="client-section-kicker">Sua lista</span>
+                <h2 id="favorites-title">Produtos favoritos</h2>
+            </div>
+        </div>
+        <div class="client-favorites-grid" data-favorites-list></div>
+    </section>
+
+    <section class="client-products">
         <div class="client-products-heading">
             <div>
                 <span class="client-section-kicker">Catálogo</span>
                 <h2>Produtos disponíveis</h2>
             </div>
-            <a href="{{ route('pesquisa') }}#produtos">Ver todos</a>
+            <a href="{{ route('cliente') }}#produtos">Ver todos</a>
         </div>
 
         @include('components.cart-itens', [
             'dados' => $dados,
-            'pesquisa' => null,
-            'categorias' => collect(),
-            'marcas' => collect(),
+            'pesquisa' => $pesquisa ?? null,
+            'categorias' => $categorias ?? collect(),
+            'marcas' => $marcas ?? collect(),
         ])
     </section>
 </main>

@@ -25,13 +25,33 @@ class LDMcontroller extends Controller
 
     public function client()
     {
-        $dados = Product::with(['category', 'brand', 'images'])
-            ->where('active', true)
-            ->get();
+        $pesquisa = trim((string) request('search', ''));
+
+        $consulta = Product::with(['category', 'brand', 'images'])
+            ->where('active', true);
+
+        if ($pesquisa !== '') {
+            $consulta->where(function ($query) use ($pesquisa) {
+                $query->where('name', 'like', "%{$pesquisa}%")
+                    ->orWhere('description', 'like', "%{$pesquisa}%")
+                    ->orWhere('sku', 'like', "%{$pesquisa}%")
+                    ->orWhereHas('brand', function ($query) use ($pesquisa) {
+                        $query->where('name', 'like', "%{$pesquisa}%");
+                    })
+                    ->orWhereHas('category', function ($query) use ($pesquisa) {
+                        $query->where('name', 'like', "%{$pesquisa}%")
+                            ->orWhereHas('parent', function ($query) use ($pesquisa) {
+                                $query->where('name', 'like', "%{$pesquisa}%");
+                            });
+                    });
+            });
+        }
+
+        $dados = $consulta->get();
 
         return view('customer.dashboard', [
             'dados' => $dados,
-            'pesquisa' => null,
+            'pesquisa' => $pesquisa ?: null,
             'favoritosCount' => 0,
             'cartCount' => 0,
             'recentCount' => 0,
@@ -41,13 +61,53 @@ class LDMcontroller extends Controller
 
     public function add()
     {
-        $marcas = Brand::all();
+        $marcas = Brand::orderBy('name')->get();
         $categorias = Category::with('children')
             ->whereNull('parent_id')
             ->orderBy('name')
             ->get();
 
         return view('pagina.add', compact('marcas', 'categorias'));
+    }
+
+    public function storeBrand(Request $request)
+    {
+        $request->merge(['name' => trim((string) $request->input('name'))]);
+        $dados = $request->validate([
+            'name' => ['required', 'string', 'max:100'],
+        ]);
+
+        $marcaExistente = Brand::query()
+            ->whereRaw('LOWER(name) = ?', [mb_strtolower($dados['name'])])
+            ->first();
+
+        if ($marcaExistente) {
+            return response()->json([
+                'message' => 'Essa marca já está cadastrada e foi selecionada.',
+                'brand' => ['id' => $marcaExistente->id, 'name' => $marcaExistente->name],
+                'existing' => true,
+            ]);
+        }
+
+        $baseSlug = Str::slug($dados['name']) ?: 'marca';
+        $slug = $baseSlug;
+        $suffix = 2;
+
+        while (Brand::where('slug', $slug)->exists()) {
+            $slug = $baseSlug.'-'.$suffix++;
+        }
+
+        $marca = Brand::create([
+            'name' => $dados['name'],
+            'slug' => $slug,
+            'active' => true,
+        ]);
+
+        return response()->json([
+            'message' => 'Marca cadastrada e selecionada.',
+            'brand' => ['id' => $marca->id, 'name' => $marca->name],
+            'existing' => false,
+        ], 201);
     }
 
     public function categories()
@@ -62,16 +122,58 @@ class LDMcontroller extends Controller
 
     public function storeCategory(Request $request)
     {
+        $request->merge(['name' => trim((string) $request->input('name'))]);
         $dados = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'description' => ['nullable', 'string'],
             'parent_id' => ['nullable', 'integer', 'exists:categories,id'],
         ]);
 
+        if ($request->expectsJson()) {
+            $existingCategoryQuery = Category::query()
+                ->whereRaw('LOWER(name) = ?', [mb_strtolower($dados['name'])]);
+
+            if (empty($dados['parent_id'])) {
+                $existingCategoryQuery->whereNull('parent_id');
+            } else {
+                $existingCategoryQuery->where('parent_id', $dados['parent_id']);
+            }
+
+            $existingCategory = $existingCategoryQuery->first();
+
+            if ($existingCategory) {
+                return response()->json([
+                    'message' => empty($dados['parent_id'])
+                        ? 'Essa categoria já está cadastrada e foi selecionada.'
+                        : 'Essa subcategoria já está cadastrada e foi selecionada.',
+                    'category' => [
+                        'id' => $existingCategory->id,
+                        'name' => $existingCategory->name,
+                        'parent_id' => $existingCategory->parent_id,
+                    ],
+                    'existing' => true,
+                ]);
+            }
+        }
+
         $dados['slug'] = Str::slug($dados['name']).'-'.Str::lower(Str::random(6));
         $dados['active'] = true;
 
-        Category::create($dados);
+        $category = Category::create($dados);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => empty($dados['parent_id'])
+                    ? 'Categoria cadastrada e selecionada.'
+                    : 'Subcategoria cadastrada e selecionada.',
+                'category' => [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                    'parent_id' => $category->parent_id,
+                ],
+                'existing' => false,
+            ], 201);
+        }
 
         return redirect('/pagina/categorias')->with(
             'success',
@@ -83,6 +185,15 @@ class LDMcontroller extends Controller
 
     public function store(Request $request)
     {
+        $price = trim((string) $request->input('price'));
+
+        if (str_contains($price, ',')) {
+            $price = str_replace('.', '', $price);
+            $price = str_replace(',', '.', $price);
+        }
+
+        $request->merge(['price' => $price]);
+
         $dados = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'brand_id' => ['required', 'integer', 'exists:brands,id'],
@@ -157,6 +268,16 @@ class LDMcontroller extends Controller
             ->take(3)
             ->get();
 
-        return view('pagina.detallsProducts', compact('product', 'relatedProducts'));
+        $brandProducts = $product->brand_id
+            ? Product::with(['images'])
+                ->where('active', true)
+                ->where('brand_id', $product->brand_id)
+                ->whereKeyNot($product->getKey())
+                ->latest()
+                ->take(3)
+                ->get()
+            : collect();
+
+        return view('pagina.detallsProducts', compact('product', 'relatedProducts', 'brandProducts'));
     }
 }

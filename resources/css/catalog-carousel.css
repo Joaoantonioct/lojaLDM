@@ -223,8 +223,8 @@
 @media (max-width: 768px) {
 
     .catalog-carousel {
-        height: auto;
-        min-height: 520px;
+        height: 360px;
+        min-height: 0;
 
         margin: 20px 15px;
 
@@ -232,7 +232,7 @@
     }
 
     .carousel-slide {
-        padding: 35px 25px 55px;
+        padding: 30px 55px 50px;
 
         text-align: center;
     }
@@ -242,7 +242,7 @@
     }
 
     .carousel-content h1 {
-        font-size: 32px;
+        font-size: 30px;
     }
 
     .carousel-content p {

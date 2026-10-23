@@ -2,11 +2,13 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CartController;
 use App\Http\Controllers\LDMcontroller;
 use App\Models\Category;
 use App\Models\Product;
 
 Route::get('/', [LDMcontroller::class, 'index'])->name('home');
+Route::get('/carrinho', [CartController::class, 'index'])->name('cart.index');
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->name('login.store');
@@ -25,8 +27,9 @@ Route::get('/pagina/detallsProducts', [LDMcontroller::class, 'detalls']);
 Route::get('/product/{product}', [LDMcontroller::class, 'detalls'])->name('product.show');
 Route::get('/pagina/add', [LDMcontroller::class, 'add']);
 Route::post('/pagina/add', [LDMcontroller::class, 'store']);
+Route::post('/pagina/marcas', [LDMcontroller::class, 'storeBrand'])->name('brands.store');
 Route::get('/pagina/categorias', [LDMcontroller::class, 'categories']);
-Route::post('/pagina/categorias', [LDMcontroller::class, 'storeCategory']);
+Route::post('/pagina/categorias', [LDMcontroller::class, 'storeCategory'])->name('categories.store');
 
 Route::get('/pesquisa', function () {
 
@@ -97,11 +100,15 @@ Route::get('/pesquisa', function () {
 
     $dados = $consultaBase->get();
 
-    return view('public.home', [
+    return view(auth()->check() ? 'customer.dashboard' : 'public.home', [
         'pesquisa' => $pesquisa,
         'dados' => $dados,
         'categorias' => $categorias,
         'marcas' => $marcas,
+        'favoritosCount' => 0,
+        'cartCount' => 0,
+        'recentCount' => 0,
+        'ordersCount' => 0,
     ]);
 
 })->name('pesquisa');

@@ -10,7 +10,6 @@
     
     @vite([
             'resources/css/style.css',
-            'resources/css/welcome.css',
             'resources/css/cart-itens.css',
             'resources/css/app.css', 
             'resources/css/header.css', 
@@ -25,9 +24,10 @@
             'resources/js/detallsProducts.js',
             'resources/css/detalssProducts.css'
         ])
+        @stack('styles')
 
 </head>
-<body>
+<body data-cart-owner="{{ auth()->id() ?? 'guest' }}">
     
         @include('partials.header')
 
@@ -36,5 +36,7 @@
     
     
     @include('partials.footer')
+
+    @stack('scripts')
 </body>
 </html>
