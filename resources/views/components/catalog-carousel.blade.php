@@ -7,21 +7,18 @@
 
             <div class="carousel-content">
 
-                <span class="eyebrow">
-                    Ofertas da semana
-                </span>
+                <span class="eyebrow">Catálogo LDM</span>
 
                 <h1>
-                    Encontre o que você precisa
+                    Encontre o que você procura
                 </h1>
 
                 <p>
-                    Produtos selecionados com ofertas especiais
-                    para você aproveitar.
+                    Produtos selecionados para facilitar o seu dia a dia.
                 </p>
 
-                <a href="/produtos" class="primary-button">
-                    Comprar agora
+                <a href="{{ route('pesquisa', ['search' => 'Papelaria']) }}" class="primary-button">
+                    Ver papelaria
                 </a>
 
             </div>
@@ -38,20 +35,18 @@
 
             <div class="carousel-content">
 
-                <span class="eyebrow">
-                    Promoção
-                </span>
+                <span class="eyebrow">Estilo para você</span>
 
                 <h1>
-                    Produtos com preços especiais
+                    Novidades em roupas
                 </h1>
 
                 <p>
-                    Aproveite nossas promoções por tempo limitado.
+                    Encontre peças para completar o seu estilo.
                 </p>
 
-                <a href="/produtos?promocao=1" class="primary-button">
-                    Ver promoções
+                <a href="{{ route('pesquisa', ['search' => 'Roupas']) }}" class="primary-button">
+                    Ver roupas
                 </a>
 
             </div>
@@ -68,20 +63,18 @@
 
             <div class="carousel-content">
 
-                <span class="eyebrow">
-                    Novidades
-                </span>
+                <span class="eyebrow">Acessórios LDM</span>
 
                 <h1>
-                    Confira nossos novos produtos
+                    Acessórios para o seu dia
                 </h1>
 
                 <p>
-                    Descubra as novidades que chegaram ao catálogo LDM.
+                    Descubra opções práticas para acompanhar você.
                 </p>
 
-                <a href="/produtos?novidades=1" class="primary-button">
-                    Ver novidades
+                <a href="{{ route('pesquisa', ['search' => 'Acessórios']) }}" class="primary-button">
+                    Ver acessórios
                 </a>
 
             </div>

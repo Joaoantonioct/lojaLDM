@@ -25,6 +25,7 @@
     @yield('content')
 
     @include('partials.footer')
+    @include('partials.mobile-nav')
 
     @stack('scripts')
 </body>

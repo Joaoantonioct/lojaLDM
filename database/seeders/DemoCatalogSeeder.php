@@ -220,6 +220,7 @@ class DemoCatalogSeeder extends Seeder
                     'description' => $produto['description'],
                     'price' => $produto['price'],
                     'qty' => $produto['qty'],
+                    'condition' => $produto['category'] === 'roupas' ? 'novo' : null,
                     'sku' => 'DEMO-'.str()->upper(str()->random(8)),
                     'private' => false,
                     'active' => true,

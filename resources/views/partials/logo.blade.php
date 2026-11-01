@@ -1,5 +1,5 @@
 <div class="logo">
     <a href="{{ auth()->check() ? route('cliente') : route('home') }}">
-        <img src="/img/logo1.png" class="logo-img" alt="LDM" width="150px" height="150px">
+        <img src="{{ asset('img/logo1.png') }}" class="logo-img" alt="LDM - Loja de variedades">
     </a>
 </div>

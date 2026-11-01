@@ -60,18 +60,11 @@
             </div>
 
             <div class="product-create-field product-create-field-full">
-                <label for="description"><i class="fa-regular fa-file-lines" aria-hidden="true"></i> Descrição <span>*</span></label>
-                <textarea id="description" name="description" rows="5" maxlength="1000" placeholder="Descreva as principais características do produto..." required>{{ old('description') }}</textarea>
-                <small class="product-create-character-count"><span data-description-count>0</span>/1000</small>
-                @error('description')<small class="product-create-error">{{ $message }}</small>@enderror
-            </div>
-
-            <div class="product-create-field product-create-field-full">
                 <label for="category_id"><i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i> Categoria <span>*</span></label>
                 <select id="category_id" name="category_id" required>
                     <option value="">Selecione uma categoria</option>
                     @foreach($categorias as $categoria)
-                        <option value="{{ $categoria->id }}" {{ old('category_id', old('parent_category_id')) == $categoria->id ? 'selected' : '' }}>{{ $categoria->name }}</option>
+                        <option value="{{ $categoria->id }}" data-apparel="{{ $categoria->isApparelCategory() ? 'true' : 'false' }}" {{ old('category_id', old('parent_category_id')) == $categoria->id ? 'selected' : '' }}>{{ $categoria->name }}</option>
                     @endforeach
                 </select>
                 <button class="product-create-add-brand" type="button" data-inline-toggle="category" aria-expanded="false" aria-controls="new-category-panel">
@@ -94,7 +87,7 @@
                     <option value="">Selecione uma subcategoria (opcional)</option>
                     @foreach($categorias as $categoria)
                         @foreach($categoria->children->sortBy('name') as $subcategoria)
-                            <option value="{{ $subcategoria->id }}" data-parent="{{ $categoria->id }}" {{ old('subcategory_id') == $subcategoria->id ? 'selected' : '' }}>{{ $subcategoria->name }}</option>
+                            <option value="{{ $subcategoria->id }}" data-parent="{{ $categoria->id }}" data-apparel="{{ $subcategoria->isApparelCategory() ? 'true' : 'false' }}" {{ old('subcategory_id') == $subcategoria->id ? 'selected' : '' }}>{{ $subcategoria->name }}</option>
                         @endforeach
                     @endforeach
                 </select>
@@ -112,6 +105,23 @@
                 <small class="product-create-inline-feedback" data-inline-feedback="subcategory" role="status" aria-live="polite" hidden></small>
                 <a class="product-create-category-link" href="{{ url('/pagina/categorias') }}">Não encontrou? Cadastre uma subcategoria.</a>
                 @error('subcategory_id')<small class="product-create-error">{{ $message }}</small>@enderror
+            </div>
+
+            <div class="product-create-field product-create-field-full" data-condition-field hidden>
+                <label for="condition"><i class="fa-solid fa-tag" aria-hidden="true"></i> Estado do produto <span>*</span></label>
+                <select id="condition" name="condition" disabled>
+                    <option value="novo" {{ old('condition', 'novo') === 'novo' ? 'selected' : '' }}>Novo</option>
+                    <option value="seminovo" {{ old('condition') === 'seminovo' ? 'selected' : '' }}>Seminovo</option>
+                    <option value="brecho" {{ old('condition') === 'brecho' ? 'selected' : '' }}>Brechó</option>
+                </select>
+                @error('condition')<small class="product-create-error">{{ $message }}</small>@enderror
+            </div>
+
+            <div class="product-create-field product-create-field-full">
+                <label for="description"><i class="fa-regular fa-file-lines" aria-hidden="true"></i> Descrição <span>*</span></label>
+                <textarea id="description" name="description" rows="5" maxlength="1000" placeholder="Descreva as principais características do produto..." required>{{ old('description') }}</textarea>
+                <small class="product-create-character-count"><span data-description-count>0</span>/1000</small>
+                @error('description')<small class="product-create-error">{{ $message }}</small>@enderror
             </div>
 
             <div class="product-create-field product-create-field-full">

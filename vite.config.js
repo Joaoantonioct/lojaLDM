@@ -6,6 +6,7 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
     plugins: [
         laravel({
+            publicDirectory: 'public_html',
             input: [
                 'resources/css/style.css',
                 'resources/css/app.css',

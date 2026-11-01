@@ -1,4 +1,17 @@
 document.addEventListener('DOMContentLoaded', function () {
+    const filterDisclosure = document.querySelector('.search-filter-disclosure');
+
+    if (filterDisclosure) {
+        const portraitFilters = window.matchMedia('(max-width: 800px) and (orientation: portrait)');
+        const syncFilterDisclosure = function () {
+            filterDisclosure.open = !portraitFilters.matches;
+        };
+
+        syncFilterDisclosure();
+        portraitFilters.addEventListener('change', syncFilterDisclosure);
+        window.addEventListener('resize', syncFilterDisclosure);
+    }
+
     const ordenacao = document.getElementById('ordenacao');
     const gradeProdutos = document.querySelector('.search-product-grid');
 
@@ -27,6 +40,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const produtos = document.getElementById('produtos');
 
     if (produtos && (window.location.hash === '#produtos' || produtos.dataset.search === 'true')) {
-        produtos.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const destino = produtos.dataset.search === 'true'
+            ? produtos.closest('.search-layout')
+            : produtos;
+
+        requestAnimationFrame(() => {
+            destino?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
     }
 });

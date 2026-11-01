@@ -70,6 +70,10 @@ Route::get('/pesquisa', function () {
 
     $categoriasSelecionadas = array_filter((array) request('categories'));
     $marcasSelecionadas = array_filter((array) request('brands'));
+    $condicoesSelecionadas = array_values(array_intersect(
+        (array) request('conditions', []),
+        ['novo', 'seminovo', 'brecho'],
+    ));
 
     if ($categoriasSelecionadas) {
         $subcategoriasSelecionadas = Category::whereIn('parent_id', $categoriasSelecionadas)
@@ -84,6 +88,10 @@ Route::get('/pesquisa', function () {
 
     if ($marcasSelecionadas) {
         $consultaBase->whereIn('brand_id', $marcasSelecionadas);
+    }
+
+    if ($condicoesSelecionadas) {
+        $consultaBase->whereIn('condition', $condicoesSelecionadas);
     }
 
     if (request()->filled('min_price')) {

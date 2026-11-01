@@ -189,20 +189,69 @@
 
 .client-favorites .client-products-heading { margin-bottom: 14px; padding: 0; }
 
+.client-favorites-carousel {
+    position: relative;
+}
+
 .client-favorites-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    display: flex;
     gap: 12px;
+    overflow-x: auto;
+    padding: 2px 1px 8px;
+    scroll-behavior: smooth;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+}
+
+.client-favorites-grid::-webkit-scrollbar {
+    display: none;
+}
+
+.client-favorites-button {
+    position: absolute;
+    top: 50%;
+    z-index: 1;
+    display: grid;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 4px 12px rgba(35, 42, 50, .2);
+    color: #2878e8;
+    cursor: pointer;
+    transform: translateY(-50%);
+}
+
+.client-favorites-button[hidden] {
+    display: none;
+}
+
+.client-favorites-button:hover,
+.client-favorites-button:focus-visible {
+    background: #2878e8;
+    color: #fff;
+}
+
+.client-favorites-prev {
+    left: -12px;
+}
+
+.client-favorites-next {
+    right: -12px;
 }
 
 .client-favorite-card {
     display: flex;
+    flex: 0 0 min(220px, calc((100% - 24px) / 3));
     min-width: 0;
     flex-direction: column;
     overflow: hidden;
     border: 1px solid #e0e3e7;
     border-radius: 6px;
     background: #fff;
+    scroll-snap-align: start;
 }
 
 .client-favorite-link {
@@ -235,6 +284,7 @@
 }
 
 .client-favorite-price { margin: 0 10px 10px; font-size: 15px; }
+.client-favorite-condition { margin: 0 10px 10px; color: #566579; font-size: 11px; }
 
 .client-favorite-remove {
     min-height: 36px;
@@ -277,7 +327,8 @@
 
 @media (max-width: 650px) {
     .client-page {
-        padding: 16px 14px 50px;
+        padding: 0 0 18px;
+        background: #fff;
     }
 
     .client-shortcuts {
@@ -295,6 +346,20 @@
 
     .client-hero {
         padding-bottom: 0;
+    }
+
+    .client-shortcuts-viewport,
+    .client-products,
+    .client-favorites {
+        margin-right: 14px;
+        margin-left: 14px;
+    }
+
+    .client-shortcuts-viewport { margin-top: 18px; }
+    .client-products .search-layout { width: 100%; }
+
+    .client-favorite-card {
+        flex-basis: min(220px, calc((100% - 12px) / 2));
     }
 
     .client-products-heading h2 {

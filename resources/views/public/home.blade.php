@@ -10,7 +10,16 @@
         </div>
     @endif
 
-    @include('components.catalog-carousel')
+    @if(blank($pesquisa ?? null))
+        @include('components.catalog-carousel')
+        @include('components.catalog.category-shortcuts')
+    @endif
+    <section class="home-featured" aria-labelledby="home-featured-title">
+        <div class="catalog-section-heading">
+            <h2 id="home-featured-title">Destaques</h2>
+            <a href="{{ route('pesquisa') }}#produtos">Ver todos <span aria-hidden="true">→</span></a>
+        </div>
     @include('components.cart-itens')
+    </section>
 </main>
 @endsection

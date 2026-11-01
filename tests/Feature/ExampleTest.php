@@ -30,17 +30,68 @@ class ExampleTest extends TestCase
             ->assertSee('Carrinho de compras');
     }
 
+    public function test_customer_favorites_have_horizontal_carousel_controls(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->get(route('cliente'))
+            ->assertOk()
+            ->assertSee('class="client-favorites-carousel"', false)
+            ->assertSee('class="client-favorites-grid"', false)
+            ->assertSee('aria-label="Ver favoritos anteriores"', false)
+            ->assertSee('aria-label="Ver próximos favoritos"', false);
+    }
+
+    public function test_customer_search_shortcut_targets_the_header_search_field(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->get(route('cliente'))
+            ->assertOk()
+            ->assertSee('id="site-header"', false)
+            ->assertSee('href="'.route('cliente').'#site-header"', false);
+    }
+
+    public function test_clothing_category_menu_links_to_new_and_seminovo_products(): void
+    {
+        $this->get(route('home'))
+            ->assertOk()
+            ->assertSee('Novos')
+            ->assertSee('Seminovos')
+            ->assertSee(route('pesquisa', [
+                'search' => 'Roupas',
+                'conditions' => ['novo'],
+            ]))
+            ->assertSee(route('pesquisa', [
+                'search' => 'Roupas',
+                'conditions' => ['seminovo'],
+            ]))
+            ->assertSee(route('pesquisa', [
+                'search' => 'Roupas',
+                'conditions' => ['brecho'],
+            ]));
+    }
+
     public function test_footer_displays_both_brand_logos(): void
     {
         $this->get(route('home'))
             ->assertOk()
             ->assertSee(asset('img/logo1.png'))
             ->assertSee(asset('img/michele1.png'))
+            ->assertSee('data-social-icon="facebook"', false)
+            ->assertSee('data-social-icon="instagram"', false)
+            ->assertSee('data-social-icon="whatsapp"', false)
+            ->assertSee('href="https://www.facebook.com/"', false)
+            ->assertSee('href="https://www.instagram.com/"', false)
+            ->assertSee('href="https://www.whatsapp.com/"', false)
             ->assertSee('© '.date('Y').' LDM. Todos os direitos reservados.');
     }
 
     public function test_product_creation_page_keeps_the_product_form_and_image_uploader(): void
     {
+        Category::create([
+            'name' => 'Calçados',
+            'slug' => 'calcados-formulario-teste',
+        ]);
+
         $this->get('/pagina/add')
             ->assertOk()
             ->assertSee('Adicionar produto')
@@ -49,6 +100,13 @@ class ExampleTest extends TestCase
             ->assertSee('data-image-dropzone', false)
             ->assertSee('data-inline-panel="category"', false)
             ->assertSee('data-inline-panel="subcategory"', false)
+            ->assertSeeInOrder([
+                'id="category_id"',
+                'id="subcategory_id"',
+                'data-condition-field',
+            ], false)
+            ->assertSee('data-apparel="true"', false)
+            ->assertSee('value="brecho"', false)
             ->assertSee('data-brand-panel', false);
     }
 
@@ -69,6 +127,111 @@ class ExampleTest extends TestCase
         $this->get(route('pesquisa', ['search' => 'celular']))
             ->assertOk()
             ->assertSee('Smartphone celular teste');
+    }
+
+    public function test_search_can_filter_products_by_new_or_seminovo_condition(): void
+    {
+        $category = Category::create([
+            'name' => 'Roupas',
+            'slug' => 'roupas-condicao-teste',
+        ]);
+        Product::create([
+            'category_id' => $category->id,
+            'name' => 'Camiseta nova teste',
+            'slug' => 'camiseta-nova-teste',
+            'price' => '49.90',
+            'qty' => 3,
+            'condition' => 'novo',
+        ]);
+        Product::create([
+            'category_id' => $category->id,
+            'name' => 'Camiseta seminova teste',
+            'slug' => 'camiseta-seminova-teste',
+            'price' => '29.90',
+            'qty' => 1,
+            'condition' => 'seminovo',
+        ]);
+
+        $this->get(route('pesquisa', [
+            'search' => 'Roupas',
+            'conditions' => ['seminovo'],
+        ]))
+            ->assertOk()
+            ->assertSee('Camiseta seminova teste')
+            ->assertDontSee('Camiseta nova teste')
+            ->assertSee('name="conditions[]" value="seminovo" checked', false);
+    }
+
+    public function test_search_can_filter_products_from_brecho(): void
+    {
+        $category = Category::create([
+            'name' => 'Roupas brechó',
+            'slug' => 'roupas-brecho-teste',
+        ]);
+        Product::create([
+            'category_id' => $category->id,
+            'name' => 'Jaqueta de brechó',
+            'slug' => 'jaqueta-de-brecho',
+            'price' => '35.00',
+            'qty' => 1,
+            'condition' => 'brecho',
+        ]);
+
+        $this->get(route('pesquisa', [
+            'search' => 'Roupas brechó',
+            'conditions' => ['brecho'],
+        ]))
+            ->assertOk()
+            ->assertSee('Jaqueta de brechó')
+            ->assertSee('Estado: Brechó')
+            ->assertSee('name="conditions[]" value="brecho" checked', false);
+    }
+
+    public function test_search_page_uses_collapsed_filters_without_the_home_carousel(): void
+    {
+        $category = Category::create([
+            'name' => 'Categoria busca responsiva',
+            'slug' => 'categoria-busca-responsiva',
+        ]);
+        Product::create([
+            'category_id' => $category->id,
+            'name' => 'Produto busca responsiva',
+            'slug' => 'produto-busca-responsiva',
+            'price' => '19.90',
+            'qty' => 2,
+        ]);
+
+        $this->get(route('pesquisa', ['search' => 'Produto busca responsiva']))
+            ->assertOk()
+            ->assertSee('Produto busca responsiva')
+            ->assertSee('<div class="search-layout has-filters">', false)
+            ->assertSee('<details class="search-filter-disclosure">', false)
+            ->assertDontSee('class="catalog-carousel"', false);
+    }
+
+    public function test_customer_search_keeps_other_sections_available_above_results(): void
+    {
+        $category = Category::create([
+            'name' => 'Categoria pesquisa cliente',
+            'slug' => 'categoria-pesquisa-cliente',
+        ]);
+        Product::create([
+            'category_id' => $category->id,
+            'name' => 'Produto resultado cliente',
+            'slug' => 'produto-resultado-cliente',
+            'price' => '29.90',
+            'qty' => 3,
+        ]);
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('pesquisa', ['search' => 'Produto resultado cliente']))
+            ->assertOk()
+            ->assertSee('Produto resultado cliente')
+            ->assertSee('id="favoritos"', false)
+            ->assertSee('Produtos favoritos')
+            ->assertSee('Produtos disponíveis')
+            ->assertSee('<div class="search-layout has-filters">', false)
+            ->assertSee('data-search="true"', false);
     }
 
     public function test_brand_can_be_created_from_the_product_creation_page(): void
@@ -257,6 +420,88 @@ class ExampleTest extends TestCase
         $this->assertDatabaseHas('product', [
             'name' => 'Produto com preço local',
             'price' => '29.90',
+            'condition' => null,
+        ]);
+    }
+
+    public function test_product_can_be_created_as_seminovo(): void
+    {
+        $brand = Brand::create([
+            'name' => 'Marca seminovo',
+            'slug' => 'marca-seminovo',
+        ]);
+        $category = Category::create([
+            'name' => 'Roupas seminovo',
+            'slug' => 'roupas-seminovo',
+        ]);
+
+        $this->post('/pagina/add', [
+            'name' => 'Produto seminovo cadastrado',
+            'brand_id' => $brand->id,
+            'qty' => 1,
+            'description' => 'Produto em bom estado.',
+            'category_id' => $category->id,
+            'price' => '25.00',
+            'private' => 0,
+            'condition' => 'seminovo',
+        ])->assertRedirect('/');
+
+        $this->assertDatabaseHas('product', [
+            'name' => 'Produto seminovo cadastrado',
+            'condition' => 'seminovo',
+        ]);
+    }
+
+    public function test_apparel_product_requires_a_condition(): void
+    {
+        $brand = Brand::create([
+            'name' => 'Marca roupa sem estado',
+            'slug' => 'marca-roupa-sem-estado',
+        ]);
+        $category = Category::create([
+            'name' => 'Calçados',
+            'slug' => 'calcados-sem-estado',
+        ]);
+
+        $this->from('/pagina/add')
+            ->post('/pagina/add', [
+                'name' => 'Tênis sem estado',
+                'brand_id' => $brand->id,
+                'qty' => 1,
+                'description' => 'Calçado de teste.',
+                'category_id' => $category->id,
+                'price' => '100.00',
+                'private' => 0,
+            ])
+            ->assertRedirect('/pagina/add')
+            ->assertSessionHasErrors('condition');
+    }
+
+    public function test_non_apparel_product_does_not_keep_a_condition(): void
+    {
+        $brand = Brand::create([
+            'name' => 'Marca papelaria',
+            'slug' => 'marca-papelaria-condicao',
+        ]);
+        $category = Category::create([
+            'name' => 'Papelaria sem estado',
+            'slug' => 'papelaria-sem-estado',
+        ]);
+
+        $this->post('/pagina/add', [
+            'name' => 'Caderno sem estado de roupa',
+            'brand_id' => $brand->id,
+            'qty' => 1,
+            'description' => 'Produto de papelaria.',
+            'category_id' => $category->id,
+            'price' => '10.00',
+            'private' => 0,
+            'condition' => 'brecho',
+        ])->assertRedirect('/');
+
+        $this->assertDatabaseHas('product', [
+            'name' => 'Caderno sem estado de roupa',
+            'condition' => null,
         ]);
     }
 
@@ -280,6 +525,17 @@ class ExampleTest extends TestCase
             'password_confirmation' => 'password123',
             'redirect' => '/product/5',
         ])->assertRedirect('/product/5');
+    }
+
+    public function test_login_returns_to_any_valid_internal_route(): void
+    {
+        $user = User::factory()->create();
+
+        $this->post(route('login.store'), [
+            'email' => $user->email,
+            'password' => 'password',
+            'redirect' => '/pesquisa?search=celular',
+        ])->assertRedirect('/pesquisa?search=celular');
     }
 
     public function test_login_ignores_external_redirect_destination(): void

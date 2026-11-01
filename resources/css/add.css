@@ -455,6 +455,7 @@
 
 .product-create-fields { grid-area: fields; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; gap: 18px; padding: 2px 20px 24px 0; }
 .product-create-field { position: relative; display: flex; min-width: 0; flex-direction: column; gap: 7px; }
+.product-create-field[hidden] { display: none; }
 .product-create-field-full { grid-column: 1 / -1; }
 .product-create-field-row { display: grid; grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .product-create-field label { display: flex; min-height: 20px; align-items: center; gap: 8px; color: #263953; font-size: 12px; font-weight: 700; }
@@ -561,4 +562,3 @@
     .product-create-actions a,
     .product-create-actions button { min-height: 40px; padding: 0 11px; font-size: 11px; }
 }
-

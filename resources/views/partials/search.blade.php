@@ -4,12 +4,13 @@
         <input
             type="text"
             name="search"
-            value = "{{ request('search') }}"
+            id="catalog-search"
+            value="{{ request('search') }}"
             placeholder="Buscar produtos, marcas e mais..."
         >
 
-        <button type="submit">
-            <i class="fa-solid fa-magnifying-glass"><img src="/img/lupa.png" alt="lupa"></i>
+        <button type="submit" aria-label="Buscar produtos">
+            <img src="{{ asset('img/lupa.png') }}" alt="">
         </button>
 
     </div>

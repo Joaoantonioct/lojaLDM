@@ -12,6 +12,7 @@
         'resources/css/header.css',
         'resources/css/footer.css',
         'resources/css/client.css',
+        'resources/css/welcome.css',
         'resources/css/catalog-carousel.css',
         'resources/css/cart-itens.css',
         'resources/js/app.js',
@@ -25,5 +26,6 @@
     @yield('content')
 
     @include('partials.footer')
+    @include('partials.mobile-nav')
 </body>
 </html>

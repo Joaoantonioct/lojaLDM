@@ -6,7 +6,7 @@ Catálogo de produtos desenvolvido com Laravel, Blade, Eloquent, Vite, CSS e Jav
 
 - catálogo público de produtos;
 - pesquisa por nome, descrição, SKU, marca e categoria;
-- filtros por categoria, marca, preço e estoque;
+- filtros por categoria, marca, estado de vestuário (novo/seminovo/brechó), preço e estoque;
 - ordenação dos cards por preço;
 - página de detalhes com galeria e produtos relacionados;
 - cadastro de produtos e imagens;

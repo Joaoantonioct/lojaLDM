@@ -23,6 +23,9 @@
             <a href="{{ (auth()->check() ? route('cliente') : route('pesquisa')) . '#produtos' }}">Produtos</a>
             <strong>Categorias</strong>
             <a href="{{ route('pesquisa', ['search' => 'Roupas']) }}">Roupas</a>
+            <a class="mobile-menu-subitem" href="{{ route('pesquisa', ['search' => 'Roupas', 'conditions' => ['novo']]) }}">Novos</a>
+            <a class="mobile-menu-subitem" href="{{ route('pesquisa', ['search' => 'Roupas', 'conditions' => ['seminovo']]) }}">Seminovos</a>
+            <a class="mobile-menu-subitem" href="{{ route('pesquisa', ['search' => 'Roupas', 'conditions' => ['brecho']]) }}">Brechó</a>
             <a href="{{ route('pesquisa', ['search' => 'celular']) }}">Acessórios de celular</a>
             <a href="{{ route('pesquisa', ['search' => 'Papelaria']) }}">Papelaria</a>
 
@@ -38,6 +41,31 @@
                     <button type="submit">Sair</button>
                 </form>
             @endguest
+        </div>
+    </details>
+
+    <details class="mobile-account-dropdown account-dropdown">
+        <summary
+            class="action-item mobile-account"
+            aria-label="{{ auth()->check() ? 'Abrir menu da conta' : 'Abrir opções de acesso' }}"
+        >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="8" r="4"></circle>
+                <path d="M4.5 21a7.5 7.5 0 0 1 15 0"></path>
+            </svg>
+            <span>{{ auth()->check() ? 'Conta' : 'Entrar' }}</span>
+        </summary>
+        <div class="account-menu mobile-account-menu">
+            @auth
+                @include('partials.account-menu-content')
+            @else
+                <div class="account-menu-guest">
+                    <strong>Acesse sua conta</strong>
+                    <span>Entre ou crie uma conta para salvar seus favoritos.</span>
+                </div>
+                <a href="{{ route('login') }}" class="account-menu-link">Entrar</a>
+                <a href="{{ route('register') }}" class="account-menu-link">Criar conta</a>
+            @endauth
         </div>
     </details>
 

@@ -10,6 +10,7 @@ function updateCartCount() {
 
     document.querySelectorAll('[data-cart-count]').forEach((badge) => {
         badge.textContent = String(count);
+        badge.classList.toggle('is-visible', count > 0);
         badge.closest('a')?.setAttribute('aria-label', `Carrinho com ${count} ${count === 1 ? 'item' : 'itens'}`);
     });
 }

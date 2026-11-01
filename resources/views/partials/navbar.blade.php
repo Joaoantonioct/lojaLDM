@@ -11,7 +11,14 @@
                 </a>
 
                 <ul class="category-menu">
-                    <li><a href="{{ route('pesquisa', ['search' => 'Roupas']) }}">Roupas</a></li>
+                    <li class="category-menu-parent">
+                        <a href="{{ route('pesquisa', ['search' => 'Roupas']) }}">Roupas</a>
+                        <ul class="category-submenu">
+                            <li><a href="{{ route('pesquisa', ['search' => 'Roupas', 'conditions' => ['novo']]) }}">Novos</a></li>
+                            <li><a href="{{ route('pesquisa', ['search' => 'Roupas', 'conditions' => ['seminovo']]) }}">Seminovos</a></li>
+                            <li><a href="{{ route('pesquisa', ['search' => 'Roupas', 'conditions' => ['brecho']]) }}">Brechó</a></li>
+                        </ul>
+                    </li>
                     <li><a href="{{ route('pesquisa', ['search' => 'Papelaria']) }}">Papelaria</a></li>
                     <li><a href="{{ route('pesquisa', ['search' => 'Acessórios']) }}">Acessórios</a></li>
                     <li><a href="{{ route('pesquisa', ['search' => 'celular']) }}">Celulares</a></li>
@@ -51,25 +58,13 @@
                         <span class="account-chevron" aria-hidden="true">▾</span>
                     </summary>
                     <div class="account-menu">
-                        <div class="account-profile">
-                            <span class="account-avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr(auth()->user()->name, 0, 1)) }}</span>
-                            <span class="account-identity">
-                                <strong>{{ auth()->user()->name }}</strong>
-                                <small>{{ auth()->user()->email }}</small>
-                            </span>
-                        </div>
-                        <a href="{{ route('cliente') }}" class="account-menu-link">Minha conta</a>
-                        <a href="{{ route('cliente') }}#produtos" class="account-menu-link">Todos os produtos</a>
-                        <form method="POST" action="{{ route('logout') }}" class="account-logout-form">
-                            @csrf
-                            <button type="submit" class="account-menu-link">Sair</button>
-                        </form>
+                        @include('partials.account-menu-content')
                     </div>
                 </details>
             @endguest
 
-            <a href="#" class="action-item">
-                <span>Compras</span>
+            <a href="{{ url('/contato') }}" class="action-item">
+                <span>Ajuda</span>
             </a>
 
             <a href="{{ route('cart.index') }}" class="action-item action-cart">

@@ -5,6 +5,14 @@ import {
 } from './customer-state.js';
 
 document.addEventListener('DOMContentLoaded', function () {
+    if (window.location.hash === '#site-header') {
+        const header = document.querySelector('#site-header');
+        const searchInput = document.querySelector('#catalog-search');
+
+        header?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        searchInput?.focus({ preventScroll: true });
+    }
+
     const clientPage = document.querySelector('.client-page');
 
     if (clientPage) {
@@ -88,6 +96,36 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const favoritesSection = document.querySelector('[data-favorites-section]');
         const favoritesList = document.querySelector('[data-favorites-list]');
+        const favoritesPreviousButton = document.querySelector('.client-favorites-prev');
+        const favoritesNextButton = document.querySelector('.client-favorites-next');
+
+        const updateFavoritesCarousel = () => {
+            if (!favoritesList || !favoritesPreviousButton || !favoritesNextButton) return;
+
+            const maxScroll = favoritesList.scrollWidth - favoritesList.clientWidth;
+            favoritesPreviousButton.hidden = favoritesList.scrollLeft <= 1;
+            favoritesNextButton.hidden = maxScroll <= 1
+                || favoritesList.scrollLeft >= maxScroll - 1;
+        };
+
+        if (favoritesList && favoritesPreviousButton && favoritesNextButton) {
+            favoritesPreviousButton.addEventListener('click', () => {
+                favoritesList.scrollBy({
+                    left: -favoritesList.clientWidth,
+                    behavior: 'smooth',
+                });
+            });
+
+            favoritesNextButton.addEventListener('click', () => {
+                favoritesList.scrollBy({
+                    left: favoritesList.clientWidth,
+                    behavior: 'smooth',
+                });
+            });
+
+            favoritesList.addEventListener('scroll', updateFavoritesCarousel, { passive: true });
+            window.addEventListener('resize', updateFavoritesCarousel);
+        }
 
         const renderFavorites = () => {
             favorites = readCustomerList(favoritesKey);
@@ -129,6 +167,13 @@ document.addEventListener('DOMContentLoaded', function () {
                     link.appendChild(price);
                 }
 
+                if (favorite.condition) {
+                    const condition = document.createElement('span');
+                    condition.className = 'client-favorite-condition';
+                    condition.textContent = `Estado: ${favorite.condition}`;
+                    link.appendChild(condition);
+                }
+
                 const removeButton = document.createElement('button');
                 removeButton.className = 'client-favorite-remove';
                 removeButton.type = 'button';
@@ -143,6 +188,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 card.append(link, removeButton);
                 favoritesList.appendChild(card);
             });
+
+            updateFavoritesCarousel();
         };
 
         setCount('searches', `${searches.length} ${searches.length === 1 ? 'busca' : 'buscas'}`);

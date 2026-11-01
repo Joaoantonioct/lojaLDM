@@ -17,6 +17,7 @@ class Product extends Model
         'category_id',
         'brand_id',
         'qty',
+        'condition',
         'description',
         'price',
         'sku',
@@ -29,6 +30,16 @@ class Product extends Model
         'private' => 'boolean',
         'active' => 'boolean',
     ];
+
+    public function conditionLabel(): ?string
+    {
+        return match ($this->condition) {
+            'novo' => 'Novo',
+            'seminovo' => 'Seminovo',
+            'brecho' => 'Brechó',
+            default => null,
+        };
+    }
 
     public function category()
     {

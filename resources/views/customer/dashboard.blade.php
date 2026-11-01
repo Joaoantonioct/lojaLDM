@@ -5,7 +5,8 @@
 @section('content')
 <main class="client-page" data-client-id="{{ auth()->id() }}">
     <section class="client-hero" aria-label="Área do cliente">
-        @include('components.catalog-carousel')
+            @include('components.catalog-carousel')
+            @include('components.catalog.category-shortcuts')
 
         <div class="client-shortcuts-viewport">
             <button class="client-shortcuts-button client-shortcuts-prev" type="button" aria-label="Atalhos anteriores">
@@ -41,7 +42,7 @@
                 <span class="client-shortcut-value" data-shortcut-value="recent">0 produtos</span>
                 </a>
 
-                <a class="client-shortcut" href="{{ route('pesquisa') }}">
+                <a class="client-shortcut" href="{{ route('cliente') }}#site-header">
                 <span class="client-shortcut-title">Sua busca</span>
                 <span class="client-shortcut-icon">&#128269;</span>
                 <span class="client-shortcut-value">Pesquisar</span>
@@ -67,7 +68,29 @@
                 <h2 id="favorites-title">Produtos favoritos</h2>
             </div>
         </div>
-        <div class="client-favorites-grid" data-favorites-list></div>
+        <div class="client-favorites-carousel">
+            <button
+                class="client-favorites-button client-favorites-prev"
+                type="button"
+                aria-label="Ver favoritos anteriores"
+                aria-controls="client-favorites-list"
+                hidden
+            >&#10094;</button>
+            <div
+                class="client-favorites-grid"
+                id="client-favorites-list"
+                data-favorites-list
+                tabindex="0"
+                aria-label="Produtos favoritos"
+            ></div>
+            <button
+                class="client-favorites-button client-favorites-next"
+                type="button"
+                aria-label="Ver próximos favoritos"
+                aria-controls="client-favorites-list"
+                hidden
+            >&#10095;</button>
+        </div>
     </section>
 
     <section class="client-products">

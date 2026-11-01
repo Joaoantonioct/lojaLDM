@@ -58,6 +58,9 @@
                             <div class="search-product-info">
                                 <h2 class="search-product-name">{{ $dado->name }}</h2>
                                 <span class="search-product-price">R$ {{ number_format((float) $dado->price, 2, ',', '.') }}</span>
+                                @if($dado->conditionLabel())
+                                    <span class="search-product-condition">Estado: {{ $dado->conditionLabel() }}</span>
+                                @endif
                                 <span class="search-product-stock {{ $dado->qty > 0 ? 'is-available' : 'is-unavailable' }}">
                                     {{ $dado->qty > 0 ? 'Em estoque' : 'Indisponível' }}
                                 </span>

@@ -18,6 +18,7 @@
     data-product-image="{{ $mainImage ? asset('storage/'.$mainImage->image) : asset('img/toddy.jpg') }}"
     data-product-price="{{ $product->price }}"
     data-product-stock="{{ $product->qty }}"
+    data-product-condition="{{ $product->conditionLabel() }}"
 >
     <nav class="product-breadcrumbs" aria-label="Navegação estrutural">
         <span><a href="{{ url('/') }}">Início</a> / {{ $product->category?->name ?? 'Produtos' }} / {{ $product->name }}</span>
@@ -33,7 +34,17 @@
                     <button class="product-thumbnail active" type="button" data-image="{{ $fallbackImage }}"><img src="{{ $fallbackImage }}" alt="{{ $product->name }}"></button>
                 @endforelse
             </div>
-            <div class="product-hero-image"><img id="product-main-image" src="{{ $mainImage ? asset('storage/'.$mainImage->image) : $fallbackImage }}" alt="{{ $product->name }}"></div>
+            <div class="product-hero-image">
+                <img id="product-main-image" src="{{ $mainImage ? asset('storage/'.$mainImage->image) : $fallbackImage }}" alt="{{ $product->name }}" draggable="false">
+                @if($images->count() > 1)
+                    <button class="product-gallery-arrow product-gallery-previous" type="button" aria-label="Imagem anterior">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>
+                    </button>
+                    <button class="product-gallery-arrow product-gallery-next" type="button" aria-label="Próxima imagem">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+                    </button>
+                @endif
+            </div>
         </div>
 
         <section class="product-summary" aria-labelledby="product-title">
@@ -126,6 +137,7 @@
             <div><dt>Produto</dt><dd>{{ $product->name }}</dd></div>
             <div><dt>Marca</dt><dd>{{ $product->brand?->name ?? 'Não informada' }}</dd></div>
             <div><dt>Categoria</dt><dd>{{ $product->category?->name ?? 'Não informada' }}</dd></div>
+            @if($product->conditionLabel())<div><dt>Estado</dt><dd>{{ $product->conditionLabel() }}</dd></div>@endif
             @if($product->sku)<div><dt>Código do produto</dt><dd>{{ $product->sku }}</dd></div>@endif
             <div><dt>Disponibilidade</dt><dd>{{ $product->qty > 0 ? 'Em estoque ('.$product->qty.' unidade(s))' : 'Indisponível' }}</dd></div>
         </dl>

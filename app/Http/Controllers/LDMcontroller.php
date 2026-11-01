@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
-use App\Models\Product;
-use App\Models\ProductImage;
 use App\Models\Brand;
 use App\Models\Category;
+use App\Models\Product;
+use App\Models\ProductImage;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class LDMcontroller extends Controller
 {
@@ -62,7 +62,7 @@ class LDMcontroller extends Controller
     public function add()
     {
         $marcas = Brand::orderBy('name')->get();
-        $categorias = Category::with('children')
+        $categorias = Category::with('children.parent')
             ->whereNull('parent_id')
             ->orderBy('name')
             ->get();
@@ -150,6 +150,7 @@ class LDMcontroller extends Controller
                         'id' => $existingCategory->id,
                         'name' => $existingCategory->name,
                         'parent_id' => $existingCategory->parent_id,
+                        'apparel' => $existingCategory->isApparelCategory(),
                     ],
                     'existing' => true,
                 ]);
@@ -170,6 +171,7 @@ class LDMcontroller extends Controller
                     'id' => $category->id,
                     'name' => $category->name,
                     'parent_id' => $category->parent_id,
+                    'apparel' => $category->isApparelCategory(),
                 ],
                 'existing' => false,
             ], 201);
@@ -192,12 +194,24 @@ class LDMcontroller extends Controller
             $price = str_replace(',', '.', $price);
         }
 
-        $request->merge(['price' => $price]);
+        $categoryId = $request->input('subcategory_id') ?: $request->input('category_id');
+        $categoryForCondition = Category::with('parent')->find($categoryId);
+        $isApparel = $categoryForCondition?->isApparelCategory() ?? false;
+
+        $request->merge([
+            'price' => $price,
+            'condition' => $isApparel ? $request->input('condition') : null,
+        ]);
 
         $dados = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'brand_id' => ['required', 'integer', 'exists:brands,id'],
             'qty' => ['required', 'integer', 'min:0'],
+            'condition' => [
+                Rule::requiredIf($isApparel),
+                'nullable',
+                Rule::in(['novo', 'seminovo', 'brecho']),
+            ],
             'description' => ['required', 'string'],
             'category_id' => ['required', 'integer', 'exists:categories,id'],
             'subcategory_id' => ['nullable', 'integer', 'exists:categories,id'],

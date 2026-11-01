@@ -5,6 +5,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const categorySelect = form.querySelector('#category_id');
     const subcategorySelect = form.querySelector('#subcategory_id');
     const subcategoryHint = form.querySelector('.product-create-subcategory-hint');
+    const conditionField = form.querySelector('[data-condition-field]');
+    const conditionSelect = form.querySelector('#condition');
     const brandSelect = form.querySelector('#brand_id');
     const brandToggle = form.querySelector('[data-brand-toggle]');
     const brandPanel = form.querySelector('[data-brand-panel]');
@@ -52,6 +54,26 @@ document.addEventListener('DOMContentLoaded', function () {
         subcategoryHint.textContent = hasOptions
             ? 'Selecione uma subcategoria, se aplicável.'
             : 'Esta categoria não possui subcategorias.';
+
+        updateConditionField();
+    }
+
+    function updateConditionField() {
+        const selectedSubcategory = subcategorySelect.selectedOptions[0];
+        const selectedCategory = categorySelect.selectedOptions[0];
+        const isApparel = selectedSubcategory?.value
+            ? selectedSubcategory.dataset.apparel === 'true'
+            : selectedCategory?.dataset.apparel === 'true';
+
+        conditionField.hidden = !isApparel;
+        conditionSelect.disabled = !isApparel;
+        conditionSelect.required = Boolean(isApparel);
+
+        if (!isApparel) {
+            conditionSelect.value = '';
+        } else if (!conditionSelect.value) {
+            conditionSelect.value = 'novo';
+        }
     }
 
     function setInlineFeedback(feedback, message, isSuccess) {
@@ -115,6 +137,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 let option = Array.from(categorySelect.options).find((item) => item.value === String(result.category.id));
                 if (!option) {
                     option = new Option(result.category.name, result.category.id);
+                    option.dataset.apparel = String(result.category.apparel);
                     categorySelect.add(option);
                 }
                 categorySelect.value = String(result.category.id);
@@ -124,10 +147,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (!option) {
                     option = new Option(result.category.name, result.category.id);
                     option.dataset.parent = String(result.category.parent_id);
+                    option.dataset.apparel = String(result.category.apparel);
                     subcategorySelect.add(option);
                 }
                 updateSubcategories();
                 subcategorySelect.value = String(result.category.id);
+                updateConditionField();
             }
 
             input.value = '';
@@ -301,6 +326,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     categorySelect.addEventListener('change', updateSubcategories);
+    subcategorySelect.addEventListener('change', updateConditionField);
     updateSubcategories();
 
     description.addEventListener('input', function () {

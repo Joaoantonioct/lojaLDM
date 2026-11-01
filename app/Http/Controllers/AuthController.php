@@ -64,12 +64,16 @@ class AuthController extends Controller
 
     private function redirectAfterAuthentication(Request $request)
     {
-        $destination = $request->input('redirect');
+        $destination = trim((string) $request->input('redirect', ''));
 
-        if (is_string($destination) && preg_match('#\A/product/[0-9]+\z#', $destination)) {
-            return redirect()->to($destination);
+        if ($destination === ''
+            || ! str_starts_with($destination, '/')
+            || str_starts_with($destination, '//')
+            || parse_url($destination, PHP_URL_SCHEME) !== null
+            || parse_url($destination, PHP_URL_HOST) !== null) {
+            return redirect()->route('cliente');
         }
 
-        return redirect()->route('cliente');
+        return redirect()->to($destination);
     }
 }
