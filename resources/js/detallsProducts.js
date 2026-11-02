@@ -85,6 +85,22 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
 
+        var buyNowButton = productPage.querySelector('[data-cart-buy-now]');
+        if (buyNowButton) {
+            buyNowButton.addEventListener('click', function () {
+                var added = addCustomerCartItem(customerStorageKey(userId, 'cart'), product);
+                if (added) {
+                    window.location.assign('/carrinho');
+                    return;
+                }
+
+                buyNowButton.textContent = product.stock < 1 ? 'Sem estoque' : 'Limite de estoque atingido';
+                window.setTimeout(function () {
+                    buyNowButton.textContent = 'Comprar agora';
+                }, 1800);
+            });
+        }
+
         if (cartDrawer) {
             var drawerCloseTimer;
             var drawerTrigger;

@@ -11,6 +11,8 @@ if (page) {
     const itemsContainer = page.querySelector('[data-cart-items]');
     const emptyState = page.querySelector('[data-cart-empty]');
     const footer = page.querySelector('[data-cart-footer]');
+    const checkoutButton = page.querySelector('[data-cart-checkout]');
+    const feedback = page.querySelector('[data-cart-feedback]');
     const money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
     function renderCart() {
@@ -64,7 +66,7 @@ if (page) {
             increase.dataset.cartAction = 'increase';
             increase.setAttribute('aria-label', `Aumentar quantidade de ${item.name}`);
             increase.textContent = '+';
-            increase.disabled = Number(item.quantity || 1) >= Number(item.stock || 99);
+            increase.disabled = Number(item.quantity || 1) >= Number(item.stock ?? 0);
             quantity.append(decrease, quantityValue, increase);
 
             const lineTotal = document.createElement('strong');
@@ -90,6 +92,7 @@ if (page) {
         emptyState.hidden = items.length > 0;
         itemsContainer.hidden = items.length === 0;
         footer.hidden = items.length === 0;
+        if (checkoutButton) checkoutButton.disabled = items.length === 0 || checkoutButton.dataset.submitting === 'true';
     }
 
     itemsContainer.addEventListener('click', (event) => {
@@ -108,7 +111,7 @@ if (page) {
 
         const quantity = Number(item.quantity || 1);
         if (button.dataset.cartAction === 'increase') {
-            item.quantity = Math.min(Number(item.stock || 99), quantity + 1);
+            item.quantity = Math.min(Number(item.stock ?? 0), quantity + 1);
         } else if (button.dataset.cartAction === 'decrease') {
             item.quantity = Math.max(1, quantity - 1);
         }
@@ -117,6 +120,46 @@ if (page) {
     });
 
     page.querySelector('[data-cart-clear]').addEventListener('click', () => writeCustomerList(cartKey, []));
+    checkoutButton?.addEventListener('click', async () => {
+        const items = readCustomerList(cartKey);
+        if (!items.length) return;
+
+        checkoutButton.dataset.submitting = 'true';
+        checkoutButton.disabled = true;
+        feedback.hidden = true;
+        feedback.textContent = '';
+
+        try {
+            const response = await fetch(checkoutButton.dataset.checkoutUrl, {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': checkoutButton.dataset.csrfToken,
+                },
+                body: JSON.stringify({
+                    items: items.map((item) => ({
+                        productId: Number(item.id),
+                        quantity: Number(item.quantity || 1),
+                    })),
+                }),
+            });
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.errors?.items?.[0] || result.message || 'Não foi possível registrar o pedido.');
+            }
+
+            writeCustomerList(cartKey, []);
+            window.location.assign(result.redirectUrl);
+        } catch (error) {
+            feedback.textContent = error.message || 'Não foi possível registrar o pedido.';
+            feedback.hidden = false;
+        } finally {
+            checkoutButton.dataset.submitting = 'false';
+            renderCart();
+        }
+    });
     window.addEventListener('ldm:cart-updated', renderCart);
     window.addEventListener('storage', (event) => {
         if (event.key === cartKey) renderCart();

@@ -6,6 +6,7 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Services\PdvIdentifierAllocator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -15,7 +16,7 @@ class LDMcontroller extends Controller
 {
     public function index()
     {
-        $dados = Product::with(['category', 'brand', 'images'])->get();
+        $dados = Product::with(['category', 'brand', 'images', 'currentPromotion'])->get();
 
         return view('public.home', [
             'dados' => $dados,
@@ -27,14 +28,13 @@ class LDMcontroller extends Controller
     {
         $pesquisa = trim((string) request('search', ''));
 
-        $consulta = Product::with(['category', 'brand', 'images'])
+        $consulta = Product::with(['category', 'brand', 'images', 'currentPromotion'])
             ->where('active', true);
 
         if ($pesquisa !== '') {
             $consulta->where(function ($query) use ($pesquisa) {
                 $query->where('name', 'like', "%{$pesquisa}%")
                     ->orWhere('description', 'like', "%{$pesquisa}%")
-                    ->orWhere('sku', 'like', "%{$pesquisa}%")
                     ->orWhereHas('brand', function ($query) use ($pesquisa) {
                         $query->where('name', 'like', "%{$pesquisa}%");
                     })
@@ -221,12 +221,12 @@ class LDMcontroller extends Controller
             'images.*' => ['file', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
         ]);
 
-        if (!empty($dados['subcategory_id'])) {
+        if (! empty($dados['subcategory_id'])) {
             $subcategoriaValida = Category::whereKey($dados['subcategory_id'])
                 ->where('parent_id', $dados['category_id'])
                 ->exists();
 
-            if (!$subcategoriaValida) {
+            if (! $subcategoriaValida) {
                 return back()
                     ->withErrors(['subcategory_id' => 'A subcategoria não pertence à categoria selecionada.'])
                     ->withInput();
@@ -243,6 +243,17 @@ class LDMcontroller extends Controller
 
         DB::transaction(function () use ($dados, $images): void {
             $product = Product::create($dados);
+            $identifiers = app(PdvIdentifierAllocator::class)->allocate($product->id);
+            $product->sku = $identifiers['sku'];
+            $product->barcode = $identifiers['barcode'];
+            $product->save();
+
+            DB::table('pdv_product_outbox')->insert([
+                'event_id' => (string) Str::uuid(),
+                'product_id' => $product->id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
 
             foreach ($images as $position => $image) {
                 ProductImage::create([
@@ -267,12 +278,13 @@ class LDMcontroller extends Controller
         $product->load([
             'category',
             'brand',
+            'currentPromotion',
             'images' => fn ($query) => $query
                 ->orderByDesc('is_main')
                 ->orderBy('position'),
         ]);
 
-        $relatedProducts = Product::with(['category', 'brand', 'images'])
+        $relatedProducts = Product::with(['category', 'brand', 'images', 'currentPromotion'])
             ->where('active', true)
             ->whereKeyNot($product->getKey())
             ->when($product->category_id, function ($query) use ($product) {
@@ -283,7 +295,7 @@ class LDMcontroller extends Controller
             ->get();
 
         $brandProducts = $product->brand_id
-            ? Product::with(['images'])
+            ? Product::with(['images', 'currentPromotion'])
                 ->where('active', true)
                 ->where('brand_id', $product->brand_id)
                 ->whereKeyNot($product->getKey())

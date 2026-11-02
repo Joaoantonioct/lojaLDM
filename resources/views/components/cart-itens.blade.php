@@ -40,7 +40,7 @@
                     <article
                         class="search-product-card"
                         data-product-id="{{ $dado->id }}"
-                        data-price="{{ $dado->price }}"
+                        data-price="{{ $dado->effective_price }}"
                     >
 
                         @php
@@ -57,12 +57,18 @@
                             </div>
                             <div class="search-product-info">
                                 <h2 class="search-product-name">{{ $dado->name }}</h2>
-                                <span class="search-product-price">R$ {{ number_format((float) $dado->price, 2, ',', '.') }}</span>
+                                @if($dado->currentPromotion)
+                                    <small class="line-through text-gray-500">R$ {{ number_format((float) $dado->price, 2, ',', '.') }}</small>
+                                @endif
+                                <span class="search-product-price">R$ {{ number_format((float) $dado->effective_price, 2, ',', '.') }}</span>
+                                @if($dado->currentPromotion)
+                                    <small class="font-semibold text-red-700">{{ number_format($dado->currentPromotion->discount_basis_points / 100, 2, ',', '.') }}% OFF</small>
+                                @endif
                                 @if($dado->conditionLabel())
                                     <span class="search-product-condition">Estado: {{ $dado->conditionLabel() }}</span>
                                 @endif
                                 <span class="search-product-stock {{ $dado->qty > 0 ? 'is-available' : 'is-unavailable' }}">
-                                    {{ $dado->qty > 0 ? 'Em estoque' : 'Indisponível' }}
+                                    {{ $dado->qty > 0 ? 'Em estoque' : 'Sem estoque' }}
                                 </span>
                             </div>
                         </a>

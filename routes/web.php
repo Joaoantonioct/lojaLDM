@@ -1,14 +1,20 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\LDMcontroller;
+use App\Http\Controllers\SiteTestOrderController;
 use App\Models\Category;
 use App\Models\Product;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', [LDMcontroller::class, 'index'])->name('home');
 Route::get('/carrinho', [CartController::class, 'index'])->name('cart.index');
+Route::middleware('auth')->post('/carrinho/finalizar', [SiteTestOrderController::class, 'store'])
+    ->name('cart.test.store');
+Route::get('/pedido-de-teste/{publicId}', [SiteTestOrderController::class, 'complete'])
+    ->whereUuid('publicId')
+    ->name('cart.test.complete');
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->name('login.store');
@@ -35,15 +41,13 @@ Route::get('/pesquisa', function () {
 
     $pesquisa = trim((string) request('search', ''));
 
-    $consultaBase = Product::with(['category', 'brand', 'images'])
+    $consultaBase = Product::with(['category', 'brand', 'images', 'currentPromotion'])
         ->where('active', true);
 
     if ($pesquisa !== '') {
         $consultaBase->where(function ($query) use ($pesquisa) {
             $query->where('name', 'like', "%{$pesquisa}%")
                 ->orWhere('description', 'like', "%{$pesquisa}%")
-                ->orWhere('sku', 'like', "%{$pesquisa}%")
-
                 ->orWhereHas('brand', function ($query) use ($pesquisa) {
                     $query->where('name', 'like', "%{$pesquisa}%");
                 })
@@ -94,12 +98,26 @@ Route::get('/pesquisa', function () {
         $consultaBase->whereIn('condition', $condicoesSelecionadas);
     }
 
+    $filtrarPrecoEfetivo = function (string $operador, string $valor) use ($consultaBase): void {
+        $consultaBase->where(function ($query) use ($operador, $valor) {
+            $query->whereHas('currentPromotion', function ($promotionQuery) use ($operador, $valor) {
+                $promotionQuery->whereRaw(
+                    "ROUND(product.price * (10000 - product_promotions.discount_basis_points) / 10000, 2) {$operador} ?",
+                    [$valor],
+                );
+            })->orWhere(function ($query) use ($operador, $valor) {
+                $query->whereDoesntHave('currentPromotion')
+                    ->where('price', $operador, $valor);
+            });
+        });
+    };
+
     if (request()->filled('min_price')) {
-        $consultaBase->where('price', '>=', request('min_price'));
+        $filtrarPrecoEfetivo('>=', (string) request('min_price'));
     }
 
     if (request()->filled('max_price')) {
-        $consultaBase->where('price', '<=', request('max_price'));
+        $filtrarPrecoEfetivo('<=', (string) request('max_price'));
     }
 
     if (request()->boolean('in_stock')) {
@@ -121,15 +139,12 @@ Route::get('/pesquisa', function () {
 
 })->name('pesquisa');
 
-
-
-
-
 Route::get('/contato', function () {
-   return view('contact');
+    return view('contact');
 });
 
 Route::get('/search', function () {
     $busca = request('search');
+
     return view('search', ['busca' => $busca]);
-}); 
+});

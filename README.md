@@ -5,11 +5,13 @@ Catálogo de produtos desenvolvido com Laravel, Blade, Eloquent, Vite, CSS e Jav
 ## Funcionalidades atuais
 
 - catálogo público de produtos;
-- pesquisa por nome, descrição, SKU, marca e categoria;
+- pesquisa por nome, descrição, marca e categoria (códigos internos não são exibidos nem pesquisáveis no site);
 - filtros por categoria, marca, estado de vestuário (novo/seminovo/brechó), preço e estoque;
 - ordenação dos cards por preço;
 - página de detalhes com galeria e produtos relacionados;
 - cadastro de produtos e imagens;
+- promoções por percentual, com período agendado e preço promocional no catálogo;
+- integração autenticada com o PDV para criação e sincronização de produtos, estoque, preço e promoções;
 - cadastro e login de clientes;
 - área privada do cliente em `/cliente`;
 - logout com retorno para a área pública;
@@ -101,6 +103,33 @@ As migrations principais criam:
 - `product_variants`.
 
 As imagens são armazenadas em `storage/app/public` e exibidas pelo link `public/storage`.
+
+## Integração com o PDV
+
+Configure `PDV_SYNC_TOKEN` no `.env` com um segredo aleatório de pelo menos 32 caracteres; use o mesmo valor na variável `PDV_SITE_SYNC_TOKEN` do servidor PDV e mantenha ambos fora do controle de versão. Depois, aplique a migration:
+
+```bash
+php artisan migrate --force
+```
+
+A API exige um cabeçalho `Authorization: Bearer` com o segredo configurado em `PDV_SYNC_TOKEN` em todas as rotas `/api/pdv/*`. O site gera SKUs `PDV-000001` e códigos de barras internos EAN-13 com prefixo `20` a `29`; os códigos são mantidos fora das telas e do catálogo.
+
+- `POST /api/pdv/identifiers`: reserva e retorna `{sku, barcode}` para um novo produto originado no PDV.
+- `POST /api/pdv/products`: cria idempotentemente no site o produto PDV, usando identificadores reservados.
+- `GET /api/pdv/products/pending` retorna os produtos em `{data: [...]}`; `POST /api/pdv/products/ack` confirma cada importação concluída pelo PDV.
+- `GET /api/pdv/site-orders/pending` entrega pedidos de teste do site com data e valores dos itens; `POST /api/pdv/site-orders/ack` confirma a importação no PDV.
+- `GET /api/pdv/site-orders/history?afterId=0` fornece o histórico paginado para conciliar pedidos já confirmados anteriormente.
+- `GET /api/pdv/products/review`: lista os produtos existentes no site sem seus códigos, para revisão explícita.
+- `POST /api/pdv/products/link`: recebe `{productId, sku, barcode}` e vincula exatamente os códigos escolhidos, recusando conflitos. Não há correspondência automática por nome.
+- `POST /api/pdv/sync`: recebe eventos idempotentes de estoque, preço e promoção localizando o produto por SKU.
+
+O cadastro do site gera os identificadores e coloca o produto na fila de saída do PDV. Produtos preexistentes só são vinculados após revisão explícita; o site preserva seus dados e não tenta encontrá-los automaticamente pelo nome.
+
+O carrinho autenticado permite registrar **pedidos temporários de teste**, sem processar pagamentos. Ao confirmar, o site valida e baixa o estoque em uma transação e coloca o pedido na fila idempotente para o PDV aplicar a baixa na unidade configurada. O PDV processa essa fila e reconcilia o histórico periodicamente; os pedidos ficam identificados separadamente no relatório e não são registrados como pagamentos nem alteram o caixa. Produtos sem estoque são recusados e exibidos como “Sem estoque”. Remova esse fluxo de teste quando integrar um sistema de pagamento real.
+
+Na importação para o PDV, um SKU já existente só pode ser atualizado quando o código de barras também corresponde. Em caso de conflito, o item antigo é preservado e o evento permanece pendente para correção.
+
+O PDV mantém uma fila local e sincroniza as movimentações da unidade configurada. O primeiro alinhamento de estoque e preço é iniciado pelo administrador na página **Promoções** do PDV; essa ação substitui os valores atuais do site pelos valores da unidade principal do PDV. Use HTTPS para qualquer comunicação fora de `localhost`.
 
 ## Validação rápida
 

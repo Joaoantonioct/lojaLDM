@@ -12,7 +12,7 @@
                 <div>
                     <h2 id="cart-drawer-title">Adicionado ao carrinho</h2>
                     <p class="cart-drawer-product-name">{{ $product->name }}</p>
-                    <p class="cart-drawer-product-meta"><span data-drawer-quantity>1</span> unidade · <strong data-drawer-total>R$ {{ number_format((float) $product->price, 2, ',', '.') }}</strong></p>
+                    <p class="cart-drawer-product-meta"><span data-drawer-quantity>1</span> unidade · <strong data-drawer-total>R$ {{ number_format((float) $product->effective_price, 2, ',', '.') }}</strong></p>
                 </div>
             </div>
             <button class="cart-drawer-close" type="button" data-cart-drawer-close aria-label="Fechar">&times;</button>
@@ -31,7 +31,7 @@
                                 <img src="{{ $suggestionImage ? asset('storage/'.$suggestionImage->image) : asset('img/toddy.jpg') }}" alt="{{ $suggestion->name }}" loading="lazy">
                             </span>
                             <span class="cart-drawer-suggestion-name">{{ $suggestion->name }}</span>
-                            <strong>R$ {{ number_format((float) $suggestion->price, 2, ',', '.') }}</strong>
+                            <strong>R$ {{ number_format((float) $suggestion->effective_price, 2, ',', '.') }}</strong>
                         </a>
                     @endforeach
                 </div>

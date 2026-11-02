@@ -87,8 +87,10 @@
 .cart-shipping-note { max-width: 130px; text-align: right; }
 .cart-summary-total { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 15px; font-weight: 700; }
 .cart-summary-total strong { font-size: 21px; }
-.cart-checkout-button { width: 100%; min-height: 46px; margin-top: 20px; border: 0; background: #d7d7d7; color: #555; font-weight: 700; cursor: not-allowed; }
+.cart-checkout-button { width: 100%; min-height: 46px; margin-top: 20px; border: 0; background: #244b3a; color: #fff; font-weight: 700; cursor: pointer; }
+.cart-checkout-button:disabled { background: #d7d7d7; color: #555; cursor: not-allowed; }
 .cart-checkout-note { margin: 11px 0 0; color: #777; font-size: 12px; line-height: 1.5; }
+.cart-checkout-feedback { margin: 10px 0 0; color: #a32626; font-size: 13px; line-height: 1.5; }
 
 .cart-empty { padding: 48px 20px; text-align: center; }
 .cart-empty-icon { display: block; margin-bottom: 12px; font-size: 36px; }

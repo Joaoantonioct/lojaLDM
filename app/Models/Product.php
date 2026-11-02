@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Product extends Model
 {
@@ -21,6 +22,7 @@ class Product extends Model
         'description',
         'price',
         'sku',
+        'barcode',
         'private',
         'active',
     ];
@@ -54,6 +56,26 @@ class Product extends Model
     public function images()
     {
         return $this->hasMany(ProductImage::class);
+    }
+
+    public function currentPromotion(): HasOne
+    {
+        return $this->hasOne(ProductPromotion::class)
+            ->where('starts_at', '<=', now())
+            ->where('ends_at', '>', now());
+    }
+
+    public function getEffectivePriceAttribute(): string
+    {
+        $promotion = $this->currentPromotion;
+        if (! $promotion) {
+            return (string) $this->price;
+        }
+
+        $priceCents = (int) round((float) $this->price * 100);
+        $effectiveCents = (int) round($priceCents * (10000 - $promotion->discount_basis_points) / 10000);
+
+        return intdiv($effectiveCents, 100).'.'.str_pad((string) ($effectiveCents % 100), 2, '0', STR_PAD_LEFT);
     }
 
     public function variants()

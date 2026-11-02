@@ -16,7 +16,7 @@
     data-product-id="{{ $product->id }}"
     data-product-name="{{ $product->name }}"
     data-product-image="{{ $mainImage ? asset('storage/'.$mainImage->image) : asset('img/toddy.jpg') }}"
-    data-product-price="{{ $product->price }}"
+    data-product-price="{{ $product->effective_price }}"
     data-product-stock="{{ $product->qty }}"
     data-product-condition="{{ $product->conditionLabel() }}"
 >
@@ -48,7 +48,7 @@
         </div>
 
         <section class="product-summary" aria-labelledby="product-title">
-            <p class="product-meta">{{ $product->brand?->name ?? 'LDM' }} @if($product->sku) <span>· Código {{ $product->sku }}</span> @endif</p>
+            <p class="product-meta">{{ $product->brand?->name ?? 'LDM' }}</p>
             <div class="product-title-row">
                 <h1 class="product-title" id="product-title">{{ $product->name }}</h1>
                 @auth
@@ -63,9 +63,13 @@
             </div>
             <span class="favorite-feedback" role="status" aria-live="polite"></span>
             <p class="product-stock-label {{ $product->qty > 0 ? 'is-available' : 'is-unavailable' }}">
-                {{ $product->qty > 0 ? 'Produto disponível' : 'Produto indisponível' }}
+                {{ $product->qty > 0 ? 'Produto disponível' : 'Sem estoque' }}
             </p>
-            <p class="product-price">R$ {{ number_format((float) $product->price, 2, ',', '.') }}</p>
+            @if($product->currentPromotion)
+                <p class="text-sm text-gray-500 line-through">R$ {{ number_format((float) $product->price, 2, ',', '.') }}</p>
+                <p class="font-semibold text-red-700">{{ number_format($product->currentPromotion->discount_basis_points / 100, 2, ',', '.') }}% OFF</p>
+            @endif
+            <p class="product-price">R$ {{ number_format((float) $product->effective_price, 2, ',', '.') }}</p>
             <p class="product-payment-note">Preço do produto</p>
             <div class="product-summary-divider"></div>
             <h2 class="product-summary-heading">Sobre este produto</h2>
@@ -76,7 +80,7 @@
         <aside class="product-purchase" aria-label="Comprar produto">
             <h2>Disponibilidade</h2>
             <p class="purchase-stock {{ $product->qty > 0 ? 'is-available' : 'is-unavailable' }}">
-                {{ $product->qty > 0 ? 'Em estoque' : 'Indisponível' }}
+                {{ $product->qty > 0 ? 'Em estoque' : 'Sem estoque' }}
             </p>
             @if($product->qty > 0)
                 <p class="purchase-quantity">{{ $product->qty }} unidade(s) disponível(is)</p>
@@ -87,7 +91,7 @@
                         <a class="product-button buy" href="{{ route('login', ['redirect' => '/product/'.$product->id]) }}">Comprar agora</a>
                         <a class="product-button cart" href="{{ route('login', ['redirect' => '/product/'.$product->id]) }}">Adicionar ao carrinho</a>
                     @else
-                        <button class="product-button buy" type="button">Comprar agora</button>
+                        <button class="product-button buy" type="button" data-cart-buy-now>Comprar agora</button>
                         <button class="product-button cart" type="button" data-cart-add>Adicionar ao carrinho</button>
                     @endguest
                 @else
@@ -122,8 +126,8 @@
                                 <img src="{{ $catalogImage ? asset('storage/'.$catalogImage->image) : $fallbackImage }}" alt="{{ $catalogProduct->name }}" loading="lazy">
                             </span>
                             <span class="product-catalog-name">{{ $catalogProduct->name }}</span>
-                            <span class="product-catalog-price">R$ {{ number_format((float) $catalogProduct->price, 2, ',', '.') }}</span>
-                            <span class="product-catalog-stock {{ $catalogProduct->qty > 0 ? 'is-available' : 'is-unavailable' }}">{{ $catalogProduct->qty > 0 ? 'Em estoque' : 'Indisponível' }}</span>
+                            <span class="product-catalog-price">R$ {{ number_format((float) $catalogProduct->effective_price, 2, ',', '.') }}</span>
+                            <span class="product-catalog-stock {{ $catalogProduct->qty > 0 ? 'is-available' : 'is-unavailable' }}">{{ $catalogProduct->qty > 0 ? 'Em estoque' : 'Sem estoque' }}</span>
                         </a>
                     @endforeach
                 </div>
@@ -138,8 +142,7 @@
             <div><dt>Marca</dt><dd>{{ $product->brand?->name ?? 'Não informada' }}</dd></div>
             <div><dt>Categoria</dt><dd>{{ $product->category?->name ?? 'Não informada' }}</dd></div>
             @if($product->conditionLabel())<div><dt>Estado</dt><dd>{{ $product->conditionLabel() }}</dd></div>@endif
-            @if($product->sku)<div><dt>Código do produto</dt><dd>{{ $product->sku }}</dd></div>@endif
-            <div><dt>Disponibilidade</dt><dd>{{ $product->qty > 0 ? 'Em estoque ('.$product->qty.' unidade(s))' : 'Indisponível' }}</dd></div>
+            <div><dt>Disponibilidade</dt><dd>{{ $product->qty > 0 ? 'Em estoque ('.$product->qty.' unidade(s))' : 'Sem estoque' }}</dd></div>
         </dl>
     </section>
 

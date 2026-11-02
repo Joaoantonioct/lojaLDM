@@ -30,9 +30,10 @@ A busca consulta:
 
 - nome;
 - descrição;
-- SKU;
 - marca;
 - categoria e categoria-pai.
+
+SKU e código de barras são identificadores internos e não aparecem nem são pesquisáveis no site.
 
 Também aceita filtros por:
 
@@ -97,6 +98,16 @@ resources/views/layouts/customer.blade.php
 resources/views/customer/dashboard.blade.php
 resources/css/client.css
 ```
+
+## 5. Integração de produtos com o PDV
+
+As rotas autenticadas `/api/pdv/*` usam o segredo `PDV_SYNC_TOKEN` no cabeçalho Bearer. O site gera os identificadores centrais: `POST /api/pdv/identifiers` reserva um SKU no padrão `PDV-000001` e um código de barras EAN-13 interno com prefixo de `20` a `29`.
+
+O cadastro de produto no site persiste os códigos sem mostrá-los na interface e cria uma mensagem de saída consultável em `GET /api/pdv/products/pending`, cuja resposta é `{data: [...]}`; o PDV confirma cada importação concluída com `POST /api/pdv/products/ack`. No sentido inverso, o PDV reserva identificadores e envia `POST /api/pdv/products`, idempotente por `eventId`; categorias são associadas pelo nome existente ou criadas quando não existem. Se um SKU já existir no PDV com outro código de barras, o cadastro antigo é preservado e o evento permanece pendente.
+
+Produtos que já existiam no site não são associados automaticamente por nome. O PDV pode consultar `GET /api/pdv/products/review` e vincular uma seleção explícita por `POST /api/pdv/products/link`, informando o ID do produto e os códigos exatos do PDV. A API recusa códigos já vinculados ou reservados para outra associação. SKU e código de barras não são expostos na interface nem no catálogo do site.
+
+O carrinho autenticado também oferece um fluxo temporário de pedido de teste, sem pagamento. `POST /carrinho/finalizar` valida o estoque sob bloqueio transacional, calcula os preços vigentes, baixa o saldo do site e cria um evento idempotente. O PDV consulta `GET /api/pdv/site-orders/pending`, registra o pedido e seus itens separadamente das vendas do caixa, aplica uma movimentação de saída na unidade configurada e confirma com `POST /api/pdv/site-orders/ack`. Também consulta `GET /api/pdv/site-orders/history` de forma paginada para conciliar pedidos anteriores já confirmados. O relatório mensal identifica os pedidos do site e seus valores informativos, sem incluí-los nos pagamentos, faturamento recebido ou conferência de caixa. Estoque insuficiente ou SKU sem vínculo bloqueia a confirmação. Remova o fluxo de teste quando o pagamento real for integrado.
 
 O dashboard reutiliza o carrossel e a listagem de produtos, mas seu layout pertence à área privada.
 

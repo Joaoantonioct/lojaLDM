@@ -52,10 +52,16 @@
                 <span>Subtotal</span>
                 <strong data-cart-total>R$ 0,00</strong>
             </div>
-            <button class="cart-checkout-button" type="button" disabled>
-                Finalização indisponível
-            </button>
-            <p class="cart-checkout-note">A finalização de pedidos ainda não está disponível nesta loja.</p>
+            @auth
+                <button class="cart-checkout-button" type="button" data-cart-checkout
+                    data-checkout-url="{{ route('cart.test.store') }}" data-csrf-token="{{ csrf_token() }}" disabled>
+                    Confirmar pedido de teste
+                </button>
+                <p class="cart-checkout-note">Modo de teste: nenhum pagamento será processado. O pedido baixa o estoque.</p>
+            @else
+                <a class="cart-checkout-button" href="{{ route('login', ['redirect' => route('cart.index')]) }}">Entre para continuar</a>
+            @endauth
+            <p class="cart-checkout-feedback" data-cart-feedback role="status" aria-live="polite" hidden></p>
         </aside>
     </div>
 </main>
