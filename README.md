@@ -100,7 +100,18 @@ As migrations principais criam:
 - `categories` e `brands`;
 - `product`;
 - `product_images`;
-- `product_variants`.
+- `product_variants`;
+- `product_promotions` e `pdv_sync_receipts`, usadas pela sincronização de promoções do PDV.
+
+Depois de enviar uma nova migration para a Hostinger, execute-a no terminal da hospedagem, dentro da pasta do Laravel e com o `.env` apontando para o banco de produção:
+
+```bash
+php artisan migrate:status
+php artisan migrate --force
+php artisan migrate:status
+```
+
+Confirme que `2026_11_01_000002_create_product_promotions_table` aparece como **Ran** no status. Essa migration cria `product_promotions` e `pdv_sync_receipts`. Se aparecer como **Pending**, o deploy ainda não aplicou a migration; não crie a tabela manualmente nem use `migrate:fresh`, pois isso pode apagar dados.
 
 As imagens são armazenadas em `storage/app/public` e exibidas pelo link `public/storage`.
 
