@@ -5,11 +5,12 @@ Catálogo de produtos desenvolvido com Laravel, Blade, Eloquent, Vite, CSS e Jav
 ## Funcionalidades atuais
 
 - catálogo público de produtos;
-- pesquisa por nome, descrição, marca e categoria (códigos internos não são exibidos nem pesquisáveis no site);
+- pesquisa por nome, descrição, marca e categoria, com sinônimos para roupas e calçados e busca por subcategorias (códigos internos não são exibidos nem pesquisáveis no site);
 - filtros por categoria, marca, estado de vestuário (novo/seminovo/brechó), preço e estoque;
 - ordenação dos cards por preço;
 - página de detalhes com galeria e produtos relacionados;
 - cadastro de produtos e imagens;
+- grade de tamanhos separada por tipo de peça: blusas/roupas (PP a XGG), calças/leggings (34 a 60) e calçados (33 a 46), com estoque por tamanho;
 - promoções por percentual, com período agendado e preço promocional no catálogo;
 - integração autenticada com o PDV para criação e sincronização de produtos, estoque, preço e promoções;
 - cadastro e login de clientes;

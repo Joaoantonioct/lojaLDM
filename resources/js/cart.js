@@ -24,7 +24,7 @@ if (page) {
         items.forEach((item) => {
             const row = document.createElement('article');
             row.className = 'cart-product';
-            row.dataset.productId = String(item.id);
+            row.dataset.cartKey = `${item.id}:${item.variantId || ''}`;
 
             const image = document.createElement('img');
             image.className = 'cart-product-image';
@@ -44,6 +44,12 @@ if (page) {
             price.className = 'cart-product-price';
             price.textContent = money.format(Number(item.price || 0));
             details.append(name, price);
+            if (item.size) {
+                const size = document.createElement('span');
+                size.className = 'cart-product-price';
+                size.textContent = `Tamanho: ${item.size}`;
+                details.append(size);
+            }
 
             const controls = document.createElement('div');
             controls.className = 'cart-product-controls';
@@ -97,15 +103,15 @@ if (page) {
 
     itemsContainer.addEventListener('click', (event) => {
         const button = event.target.closest('[data-cart-action]');
-        const row = button?.closest('[data-product-id]');
+        const row = button?.closest('[data-cart-key]');
         if (!button || !row) return;
 
         const items = readCustomerList(cartKey);
-        const item = items.find((entry) => String(entry.id) === row.dataset.productId);
+        const item = items.find((entry) => `${entry.id}:${entry.variantId || ''}` === row.dataset.cartKey);
         if (!item) return;
 
         if (button.dataset.cartAction === 'remove') {
-            writeCustomerList(cartKey, items.filter((entry) => String(entry.id) !== row.dataset.productId));
+            writeCustomerList(cartKey, items.filter((entry) => `${entry.id}:${entry.variantId || ''}` !== row.dataset.cartKey));
             return;
         }
 
@@ -140,6 +146,7 @@ if (page) {
                 body: JSON.stringify({
                     items: items.map((item) => ({
                         productId: Number(item.id),
+                        ...(item.variantId ? { variantId: Number(item.variantId) } : {}),
                         quantity: Number(item.quantity || 1),
                     })),
                 }),

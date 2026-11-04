@@ -11,8 +11,10 @@ class ProductVariant extends Model
 
     protected $fillable = [
         'product_id',
+        'color_id',
         'name',
         'sku',
+        'barcode',
         'price',
         'qty',
         'attributes',
@@ -28,5 +30,10 @@ class ProductVariant extends Model
     public function product()
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function color()
+    {
+        return $this->belongsTo(ProductColor::class);
     }
 }

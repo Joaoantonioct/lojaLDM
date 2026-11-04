@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductColor;
 use App\Models\ProductImage;
+use App\Models\ProductVariant;
 use App\Services\PdvIdentifierAllocator;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -108,10 +110,14 @@ class PdvProductIntegrationTest extends TestCase
         $category = Category::create(['name' => 'Papelaria', 'slug' => 'papelaria']);
         $identifiers = $this->withToken(self::TOKEN)->postJson('/api/pdv/identifiers')->assertOk()->json();
         $eventId = (string) Str::uuid();
+        $description = str_repeat('Descrição completa do produto. ', 35);
+        $description = mb_substr($description, 0, 1000);
         $payload = [
             'eventId' => $eventId,
             'name' => 'Caderno PDV',
+            'description' => $description,
             'category' => 'papelaria',
+            'sizeType' => 'none',
             'sku' => $identifiers['sku'],
             'barcode' => $identifiers['barcode'],
             'priceCents' => 1299,
@@ -144,14 +150,14 @@ class PdvProductIntegrationTest extends TestCase
         Storage::disk('public')->assertExists($images[0]->image);
         Storage::disk('public')->assertExists($images[1]->image);
         $this->assertDatabaseHas('product', [
-            'name' => 'Caderno PDV',
+            'name' => 'Caderno Pdv',
             'category_id' => $category->id,
             'brand_id' => null,
             'sku' => $identifiers['sku'],
             'barcode' => $identifiers['barcode'],
             'price' => '12.99',
             'qty' => 7,
-            'description' => null,
+            'description' => $description,
         ]);
     }
 
@@ -172,7 +178,7 @@ class PdvProductIntegrationTest extends TestCase
             ->assertCreated();
 
         $this->assertDatabaseHas('categories', ['name' => 'Brinquedos']);
-        $this->assertDatabaseHas('product', ['name' => 'Brinquedo PDV', 'brand_id' => null, 'description' => null]);
+        $this->assertDatabaseHas('product', ['name' => 'Brinquedo Pdv', 'brand_id' => null, 'description' => null]);
     }
 
     public function test_pdv_product_creation_uses_general_category_when_category_is_empty(): void
@@ -193,7 +199,7 @@ class PdvProductIntegrationTest extends TestCase
 
         $category = Category::query()->where('name', 'Geral')->firstOrFail();
         $this->assertDatabaseHas('product', [
-            'name' => 'Caneta sem categoria',
+            'name' => 'Caneta Sem Categoria',
             'category_id' => $category->id,
             'sku' => $identifiers['sku'],
             'barcode' => $identifiers['barcode'],
@@ -212,9 +218,11 @@ class PdvProductIntegrationTest extends TestCase
             'name' => 'Caneta da loja',
             'brand_id' => $brand->id,
             'qty' => 4,
-            'description' => 'Caneta azul',
+            'description' => str_repeat('D', 1000),
             'category_id' => $category->id,
+            'size_type' => 'none',
             'price' => '5,50',
+            'cost' => '2,00',
             'private' => 0,
             'images' => [
                 UploadedFile::fake()->createWithContent('capa.jpg', $tinyJpeg),
@@ -222,7 +230,7 @@ class PdvProductIntegrationTest extends TestCase
             ],
         ])->assertRedirect('/');
 
-        $product = Product::query()->where('name', 'Caneta da loja')->firstOrFail();
+        $product = Product::query()->where('name', 'Caneta Da Loja')->firstOrFail();
         $this->assertSame('PDV-000001', $product->sku);
         $this->assertTrue(app(PdvIdentifierAllocator::class)->isValidBarcode($product->barcode));
         $this->assertDatabaseHas('pdv_product_outbox', [
@@ -236,8 +244,10 @@ class PdvProductIntegrationTest extends TestCase
         $pending = $this->withToken(self::TOKEN)
             ->getJson('/api/pdv/products/pending')
             ->assertOk()
-            ->assertJsonPath('data.0.name', 'Caneta da loja')
+            ->assertJsonPath('data.0.name', 'Caneta Da Loja')
+            ->assertJsonPath('data.0.description', str_repeat('D', 1000))
             ->assertJsonPath('data.0.category', 'Papelaria')
+            ->assertJsonPath('data.0.sizeType', 'none')
             ->assertJsonPath('data.0.priceCents', 550)
             ->assertJsonPath('data.0.quantity', 4)
             ->assertJsonPath('data.0.sku', $product->sku)
@@ -252,6 +262,63 @@ class PdvProductIntegrationTest extends TestCase
         $this->withToken(self::TOKEN)
             ->getJson('/api/pdv/products/pending')
             ->assertJsonCount(0, 'data');
+    }
+
+    public function test_site_registration_syncs_color_and_size_combinations_to_the_pdv(): void
+    {
+        Storage::fake('public');
+        $category = Category::create(['name' => 'Calças', 'slug' => 'calcas']);
+        $tinyJpeg = base64_decode('/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAX/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAGf/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABBQJ//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAwEBPwF//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAgBAgEBPwF//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQAGPwJ//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPyF//9k=', true);
+
+        $this->post('/pagina/add', [
+            'name' => 'Calça Legging',
+            'brand_id' => Brand::create(['name' => 'Marca', 'slug' => 'marca'])->id,
+            'description' => 'Calça com duas cores e numeração brasileira.',
+            'category_id' => $category->id,
+            'size_type' => 'trousers',
+            'condition' => 'novo',
+            'price' => '49,90',
+            'cost' => '25,00',
+            'private' => 0,
+            'colors' => [
+                ['name' => 'Preta', 'image' => UploadedFile::fake()->createWithContent('preta.jpg', $tinyJpeg)],
+                ['name' => 'Azul', 'image' => UploadedFile::fake()->createWithContent('azul.jpg', $tinyJpeg)],
+            ],
+            'variants' => [
+                ['color_index' => 0, 'size' => '34', 'qty' => 2],
+                ['color_index' => 1, 'size' => '34', 'qty' => 3],
+            ],
+            'images' => [UploadedFile::fake()->createWithContent('produto.jpg', $tinyJpeg)],
+        ])->assertRedirect('/');
+
+        $product = Product::query()->where('name', 'Calça Legging')->firstOrFail();
+        $this->assertSame(5, $product->qty);
+        $this->assertDatabaseCount('product_colors', 2);
+        $this->assertDatabaseCount('product_variants', 2);
+        $this->assertEqualsCanonicalizing(['Preta', 'Azul'], ProductColor::query()->pluck('name')->all());
+        $variants = ProductVariant::query()->with('color')->orderBy('id')->get();
+        $this->assertEqualsCanonicalizing(['Preta', 'Azul'], $variants->map(fn ($variant) => $variant->color->name)->all());
+        $this->assertSame(['34', '34'], $variants->map(fn ($variant) => $variant->attributes['size'])->all());
+
+        $pending = $this->withToken(self::TOKEN)
+            ->getJson('/api/pdv/products/pending')
+            ->assertOk()
+            ->assertJsonPath('data.0.sizeType', 'trousers')
+            ->assertJsonPath('data.0.quantity', 5);
+        $this->assertEqualsCanonicalizing(
+            ['Preta', 'Azul'],
+            array_column($pending->json('data.0.colors'), 'name'),
+        );
+        $this->assertEqualsCanonicalizing(
+            [['color' => 'Preta', 'size' => '34', 'quantity' => 2], ['color' => 'Azul', 'size' => '34', 'quantity' => 3]],
+            array_map(
+                fn ($variant) => array_intersect_key($variant, array_flip(['color', 'size', 'quantity'])),
+                $pending->json('data.0.variants'),
+            ),
+        );
+        foreach ($pending->json('data.0.colors') as $color) {
+            $this->assertStringStartsWith('data:image/jpeg;base64,', $color['imageData']);
+        }
     }
 
     public function test_review_link_uses_exact_pdv_codes_rejects_conflicts_and_hides_codes_from_site_ui(): void

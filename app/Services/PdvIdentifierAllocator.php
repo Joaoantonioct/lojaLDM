@@ -45,8 +45,10 @@ class PdvIdentifierAllocator
                 $barcode = $this->barcode($barcodeNumber);
 
                 $skuExists = Product::query()->where('sku', $sku)->exists()
+                    || DB::table('product_variants')->where('sku', $sku)->exists()
                     || DB::table('pdv_identifiers')->where('sku', $sku)->exists();
                 $barcodeExists = Product::query()->where('barcode', $barcode)->exists()
+                    || DB::table('product_variants')->where('barcode', $barcode)->exists()
                     || DB::table('pdv_identifiers')->where('barcode', $barcode)->exists();
 
                 if (! $skuExists && ! $barcodeExists) {
@@ -83,8 +85,10 @@ class PdvIdentifierAllocator
     private function nextSequenceNumbers(): array
     {
         $skuValues = Product::query()->whereNotNull('sku')->pluck('sku')
+            ->merge(DB::table('product_variants')->whereNotNull('sku')->pluck('sku'))
             ->merge(DB::table('pdv_identifiers')->pluck('sku'));
         $barcodeValues = Product::query()->whereNotNull('barcode')->pluck('barcode')
+            ->merge(DB::table('product_variants')->whereNotNull('barcode')->pluck('barcode'))
             ->merge(DB::table('pdv_identifiers')->pluck('barcode'));
 
         $nextSku = 1;

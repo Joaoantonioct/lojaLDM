@@ -76,8 +76,13 @@ class PdvSyncTest extends TestCase
         $this->postJson('/api/pdv/sync', [
             'eventId' => (string) Str::uuid(),
             'type' => 'product.price',
-            'payload' => ['sku' => $product->sku, 'priceCents' => 1250],
+            'payload' => [
+                'sku' => $product->sku,
+                'priceCents' => 1250,
+                'description' => str_repeat('x', 1000),
+            ],
         ], $headers)->assertOk();
+        $this->assertSame(str_repeat('x', 1000), $product->fresh()->description);
 
         $this->postJson('/api/pdv/sync', [
             'eventId' => (string) Str::uuid(),

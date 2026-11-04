@@ -35,6 +35,11 @@ class Category extends Model
 
     public function isApparelCategory(): bool
     {
+        return $this->apparelSizeType() !== null;
+    }
+
+    public function apparelSizeType(): ?string
+    {
         $categoryNames = Str::ascii(mb_strtolower(implode(' ', array_filter([
             $this->name,
             $this->slug,
@@ -42,9 +47,17 @@ class Category extends Model
             $this->parent?->slug,
         ]))));
 
+        if (preg_match('/\b(?:calcados?|sapat\w*|tenis|sandalia\w*|chinelo\w*|botas?)\b/', $categoryNames)) {
+            return 'footwear';
+        }
+
+        if (preg_match('/\b(?:calcas?|jeans|legging\w*|bermuda\w*|short\w*)\b/', $categoryNames)) {
+            return 'trousers';
+        }
+
         return preg_match(
-            '/\b(?:roup\w*|vestuario\w*|vestimenta\w*|vestid\w*|moda\w*|calc(?:as?|ados?)|sapat\w*|tenis|sandalia\w*|chinelo\w*|botas?|camis\w*|blusa\w*|uniforme\w*|lingerie|biquini|jaqueta\w*|moletom|meia|cueca|sutia|short\w*|bermuda\w*|saia\w*|acessorios\s+de\s+vestuario\w*|acessorios\s+de\s+vestimenta\w*)\b/',
+            '/\b(?:roup\w*|vestuario\w*|vestimenta\w*|vestid\w*|moda\w*|calc(?:as?|ados?)|legging\w*|sapat\w*|tenis|sandalia\w*|chinelo\w*|botas?|camis\w*|blusa\w*|uniforme\w*|lingerie|biquini|jaqueta\w*|moletom|meia|cueca|sutia|short\w*|bermuda\w*|saia\w*|acessorios\s+de\s+vestuario\w*|acessorios\s+de\s+vestimenta\w*)\b/',
             $categoryNames,
-        ) === 1;
+        ) === 1 ? 'clothing' : null;
     }
 }

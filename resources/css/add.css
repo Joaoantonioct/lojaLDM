@@ -496,6 +496,23 @@
 .product-create-input-prefix input { width: 100%; min-width: 0; height: 100%; padding: 0 10px; border: 0; outline: 0; background: transparent; color: var(--create-ink); font: inherit; font-size: 13px; }
 .product-create-subcategory-hint,
 .product-create-upload-note { color: var(--create-muted); font-size: 10px; line-height: 1.5; }
+.product-create-size-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 8px; }
+.product-create-size-option { display: grid !important; min-height: 42px !important; grid-template-columns: 16px 1fr 54px; gap: 6px !important; padding: 6px 8px; border: 1px solid var(--create-line); border-radius: 7px; background: #fff; }
+.product-create-size-option > input[type="checkbox"] { width: 15px; height: 15px; margin: 0; accent-color: var(--create-blue); }
+.product-create-size-option > input[type="number"] { width: 54px; min-width: 0; height: 28px; padding: 0 4px; border: 1px solid var(--create-line); border-radius: 5px; font: inherit; font-size: 11px; }
+.product-create-size-option > input[type="number"]:disabled { background: #f3f5f8; }
+.product-create-color-heading,
+.product-create-color-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.product-create-color-heading { margin-bottom: 12px; }
+.product-create-color-list { display: grid; gap: 12px; }
+.product-create-color-card { display: grid; gap: 12px; padding: 14px; border: 1px solid var(--create-line); border-radius: 8px; background: #fbfcfe; }
+.product-create-color-card-heading > label { flex: 1; }
+.product-create-color-image { display: grid; grid-template-columns: minmax(160px, 1fr) 64px; align-items: center; gap: 10px; }
+.product-create-color-image input { grid-column: 1; }
+.product-create-color-preview { grid-column: 2; grid-row: 1 / span 2; width: 64px; height: 64px; object-fit: cover; border: 1px solid var(--create-line); border-radius: 6px; background: #fff; }
+.product-create-color-stock { display: grid; gap: 8px; }
+.product-create-color-stock > label { max-width: 240px; }
+.product-create-color-stock .product-create-size-grid { margin-top: 0; }
 .product-create-category-link { width: fit-content; color: var(--create-blue); font-size: 11px; text-decoration: none; }
 .product-create-category-link:hover { text-decoration: underline; }
 .product-create-character-count { position: absolute; right: 9px; bottom: 8px; color: #75849a; font-size: 10px; }

@@ -19,8 +19,10 @@ class Product extends Model
         'brand_id',
         'qty',
         'condition',
+        'size_type',
         'description',
         'price',
+        'cost',
         'sku',
         'barcode',
         'private',
@@ -29,6 +31,7 @@ class Product extends Model
 
     protected $casts = [
         'price' => 'decimal:2',
+        'cost' => 'decimal:2',
         'private' => 'boolean',
         'active' => 'boolean',
     ];
@@ -81,5 +84,10 @@ class Product extends Model
     public function variants()
     {
         return $this->hasMany(ProductVariant::class);
+    }
+
+    public function colors()
+    {
+        return $this->hasMany(ProductColor::class);
     }
 }

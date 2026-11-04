@@ -48,13 +48,53 @@
 
             <div class="product-create-field-row">
                 <div class="product-create-field">
-                    <label for="price"><i class="fa-solid fa-circle-dollar-to-slot" aria-hidden="true"></i> Preço <span>*</span></label>
+                    <label for="price"><i class="fa-solid fa-circle-dollar-to-slot" aria-hidden="true"></i> Preço de venda <span>*</span></label>
                     <div class="product-create-input-prefix"><span>R$</span><input type="text" id="price" name="price" value="{{ old('price') }}" inputmode="decimal" autocomplete="off" placeholder="0,00" required></div>
                     @error('price')<small class="product-create-error">{{ $message }}</small>@enderror
                 </div>
                 <div class="product-create-field">
+                    <label for="cost"><i class="fa-solid fa-tag" aria-hidden="true"></i> Custo <span>*</span></label>
+                    <div class="product-create-input-prefix"><span>R$</span><input type="text" id="cost" name="cost" value="{{ old('cost') }}" inputmode="decimal" autocomplete="off" placeholder="0,00" required></div>
+                    @error('cost')<small class="product-create-error">{{ $message }}</small>@enderror
+                </div>
+            </div>
+
+            <div class="product-create-field product-create-field-full">
+                <label for="size_type"><i class="fa-solid fa-ruler" aria-hidden="true"></i> Tipo de peça <span>*</span></label>
+                <select id="size_type" name="size_type" required>
+                    <option value="">Selecione o tipo de peça</option>
+                    <option value="clothing" {{ old('size_type') === 'clothing' ? 'selected' : '' }}>Roupas em letras (PP a XGG: blusas, camisetas, vestidos, saias e jaquetas)</option>
+                    <option value="trousers" {{ old('size_type') === 'trousers' ? 'selected' : '' }}>Calça, legging, bermuda e shorts (numeração 34 a 60)</option>
+                    <option value="footwear" {{ old('size_type') === 'footwear' ? 'selected' : '' }}>Calçado (numeração 33 a 46)</option>
+                    <option value="none" {{ old('size_type') === 'none' ? 'selected' : '' }}>Outro produto, sem grade de tamanho</option>
+                </select>
+                @error('size_type')<small class="product-create-error">{{ $message }}</small>@enderror
+            </div>
+
+            <section class="product-create-field product-create-field-full product-create-colors" data-color-field>
+                <div class="product-create-color-heading">
+                    <div>
+                        <strong>Cores do produto</strong>
+                        <p class="product-create-subcategory-hint">Adicione uma foto para cada cor. O estoque será separado por cor e tamanho.</p>
+                    </div>
+                    <button class="product-create-add-brand" type="button" data-add-color>
+                        <i class="fa-solid fa-plus" aria-hidden="true"></i> Adicionar cor
+                    </button>
+                </div>
+                <div class="product-create-color-list" data-color-options></div>
+                @error('colors')<small class="product-create-error">{{ $message }}</small>@enderror
+                @error('colors.*.name')<small class="product-create-error">{{ $message }}</small>@enderror
+                @error('colors.*.image')<small class="product-create-error">{{ $message }}</small>@enderror
+                @error('variants')<small class="product-create-error">{{ $message }}</small>@enderror
+                @error('variants.*.size')<small class="product-create-error">{{ $message }}</small>@enderror
+                @error('variants.*.qty')<small class="product-create-error">{{ $message }}</small>@enderror
+            </section>
+
+            <div class="product-create-field-row">
+                <div class="product-create-field">
                     <label for="qty"><i class="fa-solid fa-cube" aria-hidden="true"></i> Quantidade em estoque <span>*</span></label>
-                    <input type="number" id="qty" name="qty" value="{{ old('qty') }}" min="0" placeholder="Ex.: 10" required>
+                    <input type="number" id="qty" name="qty" value="{{ old('qty') }}" min="0" placeholder="Ex.: 10" required data-total-qty>
+                    <small class="product-create-subcategory-hint" data-total-qty-hint hidden>O total será calculado pela soma das combinações de cor e tamanho.</small>
                     @error('qty')<small class="product-create-error">{{ $message }}</small>@enderror
                 </div>
             </div>
@@ -64,7 +104,7 @@
                 <select id="category_id" name="category_id" required>
                     <option value="">Selecione uma categoria</option>
                     @foreach($categorias as $categoria)
-                        <option value="{{ $categoria->id }}" data-apparel="{{ $categoria->isApparelCategory() ? 'true' : 'false' }}" {{ old('category_id', old('parent_category_id')) == $categoria->id ? 'selected' : '' }}>{{ $categoria->name }}</option>
+                        <option value="{{ $categoria->id }}" data-apparel="{{ $categoria->isApparelCategory() ? 'true' : 'false' }}" data-size-type="{{ $categoria->apparelSizeType() }}" {{ old('category_id', old('parent_category_id')) == $categoria->id ? 'selected' : '' }}>{{ $categoria->name }}</option>
                     @endforeach
                 </select>
                 <button class="product-create-add-brand" type="button" data-inline-toggle="category" aria-expanded="false" aria-controls="new-category-panel">
@@ -82,16 +122,16 @@
             </div>
 
             <div class="product-create-field product-create-field-full">
-                <label for="subcategory_id"><i class="fa-solid fa-grip" aria-hidden="true"></i> Subcategoria <small>(opcional)</small></label>
+                <label for="subcategory_id"><i class="fa-solid fa-grip" aria-hidden="true"></i> Subcategoria <span data-subcategory-required hidden>*</span></label>
                 <select id="subcategory_id" name="subcategory_id" disabled>
                     <option value="">Selecione uma subcategoria (opcional)</option>
                     @foreach($categorias as $categoria)
                         @foreach($categoria->children->sortBy('name') as $subcategoria)
-                            <option value="{{ $subcategoria->id }}" data-parent="{{ $categoria->id }}" data-apparel="{{ $subcategoria->isApparelCategory() ? 'true' : 'false' }}" {{ old('subcategory_id') == $subcategoria->id ? 'selected' : '' }}>{{ $subcategoria->name }}</option>
+                            <option value="{{ $subcategoria->id }}" data-parent="{{ $categoria->id }}" data-apparel="{{ $subcategoria->isApparelCategory() ? 'true' : 'false' }}" data-size-type="{{ $subcategoria->apparelSizeType() }}" {{ old('subcategory_id') == $subcategoria->id ? 'selected' : '' }}>{{ $subcategoria->name }}</option>
                         @endforeach
                     @endforeach
                 </select>
-                <small class="product-create-subcategory-hint">Escolha uma categoria para ver as opções disponíveis.</small>
+                <small class="product-create-subcategory-hint" data-subcategory-hint>Escolha uma categoria para ver as opções disponíveis.</small>
                 <button class="product-create-add-brand" type="button" data-inline-toggle="subcategory" aria-expanded="false" aria-controls="new-subcategory-panel" disabled>
                     <i class="fa-solid fa-plus" aria-hidden="true"></i> Cadastrar subcategoria
                 </button>
@@ -117,6 +157,15 @@
                 @error('condition')<small class="product-create-error">{{ $message }}</small>@enderror
             </div>
 
+            <div class="product-create-field product-create-field-full" data-size-field hidden>
+                <label><i class="fa-solid fa-ruler" aria-hidden="true"></i> Tamanhos e estoque por tamanho <span>*</span></label>
+                <p class="product-create-subcategory-hint">Selecione os tamanhos disponíveis e informe quantas unidades há de cada um.</p>
+                <div class="product-create-size-grid" data-size-options data-selected-variants="{{ json_encode(old('variants', [])) }}"></div>
+                @error('variants')<small class="product-create-error">{{ $message }}</small>@enderror
+                @error('variants.*.size')<small class="product-create-error">{{ $message }}</small>@enderror
+                @error('variants.*.qty')<small class="product-create-error">{{ $message }}</small>@enderror
+            </div>
+
             <div class="product-create-field product-create-field-full">
                 <label for="description"><i class="fa-regular fa-file-lines" aria-hidden="true"></i> Descrição <span>*</span></label>
                 <textarea id="description" name="description" rows="5" maxlength="1000" placeholder="Descreva as principais características do produto..." required>{{ old('description') }}</textarea>
@@ -140,11 +189,11 @@
             <div class="product-create-image-grid" data-image-preview aria-live="polite"></div>
             <label class="product-create-dropzone" data-image-dropzone for="images">
                 <i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i>
-                <strong>Arraste e solte as imagens aqui</strong>
+                <strong>Arraste e solte ao menos uma imagem aqui <span>*</span></strong>
                 <span>ou clique para selecionar</span>
                 <small>JPG, PNG ou WEBP. Até 5 MB por imagem.</small>
             </label>
-            <input class="product-create-file-input" type="file" id="images" name="images[]" accept="image/jpeg,image/png,image/webp" multiple>
+            <input class="product-create-file-input" type="file" id="images" name="images[]" accept="image/jpeg,image/png,image/webp" multiple required>
             <small class="product-create-upload-note">Envie até 10 imagens. A primeira será usada na vitrine do produto.</small>
             @error('images')<small class="product-create-error">{{ $message }}</small>@enderror
             @error('images.*')<small class="product-create-error">{{ $message }}</small>@enderror
@@ -159,7 +208,7 @@
 
         <footer class="product-create-actions">
             <a href="{{ route('home') }}"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Cancelar</a>
-            <button type="submit"><i class="fa-regular fa-floppy-disk" aria-hidden="true"></i> Publicar produto</button>
+            <button type="submit"><i class="fa-regular fa-floppy-disk" aria-hidden="true"></i> Revisar e publicar produto</button>
         </footer>
     </form>
 </main>

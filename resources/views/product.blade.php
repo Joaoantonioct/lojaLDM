@@ -106,7 +106,7 @@
                         {{-- Botão --}}
                         <a
                             class="produto-link"
-                            href="{{ url('/product/' . $dado->id) }}"
+                            href="{{ url('/product/' . $dado->id) }}#product-content"
                         >
                             Ver produto
                             <span>→</span>

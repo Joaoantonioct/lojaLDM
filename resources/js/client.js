@@ -21,6 +21,10 @@ document.addEventListener('DOMContentLoaded', function () {
         const cartKey = customerStorageKey(userId, 'cart');
         const recentKey = customerStorageKey(userId, 'recent');
         const favoritesKey = customerStorageKey(userId, 'favorites');
+        const activeProductIds = new Set(
+            clientPage.dataset.activeProductIds.split(',').filter(Boolean),
+        );
+        const isActiveProduct = (product) => product && activeProductIds.has(String(product.id));
         const params = new URLSearchParams(window.location.search);
         const searchTerm = (params.get('search') || '').trim();
 
@@ -47,10 +51,19 @@ document.addEventListener('DOMContentLoaded', function () {
             writeCustomerList(searchesKey, updatedSearches.slice(0, 8));
         }
 
-        const searches = readCustomerList(searchesKey);
-        const cart = readCustomerList(cartKey);
-        const recent = readCustomerList(recentKey);
-        let favorites = readCustomerList(favoritesKey);
+        const searches = readCustomerList(searchesKey).map((search) => ({
+            ...search,
+            products: Array.isArray(search.products)
+                ? search.products.filter(isActiveProduct)
+                : [],
+        }));
+        const cart = readCustomerList(cartKey).filter(isActiveProduct);
+        const recent = readCustomerList(recentKey).filter(isActiveProduct);
+        let favorites = readCustomerList(favoritesKey).filter(isActiveProduct);
+        writeCustomerList(searchesKey, searches);
+        writeCustomerList(cartKey, cart);
+        writeCustomerList(recentKey, recent);
+        writeCustomerList(favoritesKey, favorites);
         const searchProducts = [...new Map(
             searches.flatMap((search) => search.products || []).map((product) => [String(product.id), product]),
         ).values()];
@@ -205,10 +218,22 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const searchShortcut = document.querySelector('[data-shortcut="searches"]');
         if (searchShortcut && searches[0]) {
-            const target = new URL(searchShortcut.href, window.location.origin);
-            target.search = '';
-            target.searchParams.set('search', searches[0].term);
-            searchShortcut.href = target.toString();
+            const products = (searches[0].products || [])
+                .filter((product) => Number.isInteger(Number(product.id)) && Number(product.id) > 0)
+                .slice(0, 8);
+
+            if (products.length) {
+                const target = new URL(searchShortcut.dataset.recommendationsUrl, window.location.origin);
+                products.forEach((product) => target.searchParams.append('interest_products[]', product.id));
+                target.searchParams.set('interest_search', searches[0].term);
+                target.hash = 'produtos';
+                searchShortcut.href = target.toString();
+            } else if (searches[0].term) {
+                const target = new URL(searchShortcut.dataset.recommendationsUrl, window.location.origin);
+                target.searchParams.set('search', searches[0].term);
+                target.hash = 'produtos';
+                searchShortcut.href = target.toString();
+            }
         }
 
         const recentShortcut = document.querySelector('[data-shortcut="recent"]');

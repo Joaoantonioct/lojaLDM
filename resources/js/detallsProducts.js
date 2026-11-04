@@ -20,6 +20,81 @@ document.addEventListener('DOMContentLoaded', function () {
             condition: productPage.dataset.productCondition || null,
             url: window.location.href,
         };
+        var productColor = productPage.querySelector('[data-product-color]');
+        var productSize = productPage.querySelector('[data-product-size]');
+        var colorSelectionLabel = productColor?.querySelector('[data-color-selection]');
+        var sizeSelectionLabel = productSize?.querySelector('[data-size-selection]');
+        var selectedVariant = null;
+        var selectedColor = null;
+
+        var focusMissingOption = function () {
+            if (productColor && !selectedColor) {
+                productColor.querySelector('input[type="radio"]:not(:disabled)')?.focus();
+                return;
+            }
+            if (productSize && !selectedVariant) {
+                var visibleOption = productSize.querySelector('[data-size-color]:not([hidden]) input[type="radio"]:not(:disabled)')
+                    || productSize.querySelector('input[type="radio"]:not(:disabled)');
+                visibleOption?.focus();
+            }
+        };
+
+        var updateColorSelection = function (option) {
+            selectedColor = {
+                colorId: Number(option.dataset.colorId),
+                color: option.dataset.colorName,
+                image: option.dataset.colorImage,
+            };
+            if (colorSelectionLabel) colorSelectionLabel.textContent = selectedColor.color;
+            if (sizeSelectionLabel) sizeSelectionLabel.textContent = 'Escolha';
+            selectedVariant = null;
+
+            var mainImage = productPage.querySelector('#product-main-image');
+            if (mainImage && selectedColor.image) mainImage.src = selectedColor.image;
+
+            if (productSize) {
+                productSize.querySelectorAll('[data-size-color]').forEach(function (label) {
+                    var visible = label.dataset.sizeColor === String(selectedColor.colorId);
+                    label.hidden = !visible;
+                    var input = label.querySelector('input[type="radio"]');
+                    input.checked = false;
+                });
+            } else if (option.dataset.colorVariantId) {
+                selectedVariant = {
+                    variantId: Number(option.dataset.colorVariantId),
+                    colorId: selectedColor.colorId,
+                    color: selectedColor.color,
+                    stock: Number(option.dataset.stock),
+                    image: selectedColor.image,
+                };
+            }
+        };
+
+        if (productColor) {
+            productColor.addEventListener('change', function (event) {
+                var option = event.target;
+                if (!option.matches('input[type="radio"][data-color-id]')) return;
+                updateColorSelection(option);
+            });
+            var initialColor = productColor.querySelector('input[type="radio"]:checked');
+            if (initialColor) updateColorSelection(initialColor);
+        }
+
+        if (productSize) {
+            productSize.addEventListener('change', function (event) {
+                var option = event.target;
+                if (!option.matches('input[type="radio"][data-variant-id]')) return;
+                selectedVariant = {
+                    variantId: Number(option.dataset.variantId),
+                    size: option.dataset.size,
+                    colorId: option.dataset.colorId ? Number(option.dataset.colorId) : null,
+                    color: option.dataset.colorName || null,
+                    stock: Number(option.dataset.stock),
+                    image: selectedColor?.image || null,
+                };
+                if (sizeSelectionLabel) sizeSelectionLabel.textContent = option.dataset.size || 'Escolha';
+            });
+        }
 
         saveRecentCustomerItem(customerStorageKey(userId, 'recent'), product);
 
@@ -58,12 +133,20 @@ document.addEventListener('DOMContentLoaded', function () {
             addToCartButton.setAttribute('aria-live', 'polite');
 
             addToCartButton.addEventListener('click', function () {
-                var added = addCustomerCartItem(customerStorageKey(userId, 'cart'), product);
+                if ((productColor || productSize) && !selectedVariant) {
+                    focusMissingOption();
+                    addToCartButton.textContent = productColor && !selectedColor ? 'Selecione uma cor' : 'Selecione um tamanho';
+                    window.setTimeout(function () { addToCartButton.textContent = originalButtonText; }, 1800);
+                    return;
+                }
+                var cartProduct = selectedVariant ? { ...product, ...selectedVariant } : product;
+                var added = addCustomerCartItem(customerStorageKey(userId, 'cart'), cartProduct);
                 addToCartButton.textContent = added ? 'Adicionado ao carrinho' : 'Limite de estoque atingido';
 
                 if (added && cartDrawer) {
                     var cartItem = readCustomerList(customerStorageKey(userId, 'cart')).find(function (item) {
-                        return String(item.id) === String(product.id);
+                        return String(item.id) === String(product.id)
+                            && String(item.variantId || '') === String(selectedVariant?.variantId || '');
                     });
 
                     cartDrawer.querySelector('[data-drawer-quantity]').textContent = String(cartItem.quantity);
@@ -88,7 +171,14 @@ document.addEventListener('DOMContentLoaded', function () {
         var buyNowButton = productPage.querySelector('[data-cart-buy-now]');
         if (buyNowButton) {
             buyNowButton.addEventListener('click', function () {
-                var added = addCustomerCartItem(customerStorageKey(userId, 'cart'), product);
+                if ((productColor || productSize) && !selectedVariant) {
+                    focusMissingOption();
+                    buyNowButton.textContent = productColor && !selectedColor ? 'Selecione uma cor' : 'Selecione um tamanho';
+                    window.setTimeout(function () { buyNowButton.textContent = 'Comprar agora'; }, 1800);
+                    return;
+                }
+                var cartProduct = selectedVariant ? { ...product, ...selectedVariant } : product;
+                var added = addCustomerCartItem(customerStorageKey(userId, 'cart'), cartProduct);
                 if (added) {
                     window.location.assign('/carrinho');
                     return;

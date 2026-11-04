@@ -3,7 +3,7 @@
 @section('title', 'Área do cliente | LDM')
 
 @section('content')
-<main class="client-page" data-client-id="{{ auth()->id() }}">
+<main class="client-page" data-client-id="{{ auth()->id() }}" data-active-product-ids="{{ collect($activeProductIds ?? [])->implode(',') }}">
     <section class="client-hero" aria-label="Área do cliente">
             @include('components.catalog-carousel')
             @include('components.catalog.category-shortcuts')
@@ -21,7 +21,7 @@
                 <span class="client-shortcut-value" data-shortcut-value="favorites">0 produtos</span>
                 </a>
 
-                <a class="client-shortcut" href="{{ route('pesquisa') }}" data-shortcut="searches">
+                <a class="client-shortcut" href="{{ route('cliente') }}" data-recommendations-url="{{ route('cliente') }}" data-shortcut="searches">
                 <span class="client-shortcut-title">Também interessa</span>
                 <span class="client-shortcut-icon" data-shortcut-preview="searches" aria-hidden="true">&#9734;</span>
                 <span class="client-shortcut-note" data-shortcut-note="searches"></span>
@@ -97,7 +97,7 @@
         <div class="client-products-heading">
             <div>
                 <span class="client-section-kicker">Catálogo</span>
-                <h2>Produtos disponíveis</h2>
+                <h2>{{ !empty($recomendacoes) ? 'Produtos que podem interessar' : 'Produtos disponíveis' }}</h2>
             </div>
             <a href="{{ route('cliente') }}#produtos">Ver todos</a>
         </div>

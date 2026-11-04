@@ -42,7 +42,8 @@ export function saveRecentCustomerItem(key, item, limit = 8) {
 
 export function addCustomerCartItem(key, item) {
     const items = readCustomerList(key);
-    const existing = items.find((saved) => String(saved.id) === String(item.id));
+    const existing = items.find((saved) => String(saved.id) === String(item.id)
+        && String(saved.variantId || '') === String(item.variantId || ''));
     const stock = Number.isFinite(Number(item.stock)) ? Number(item.stock) : 99;
 
     if (stock < 1) {

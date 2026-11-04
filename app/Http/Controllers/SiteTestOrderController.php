@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\ProductVariant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -16,61 +17,84 @@ class SiteTestOrderController extends Controller
     {
         $data = $request->validate([
             'items' => ['required', 'array', 'min:1', 'max:20'],
-            'items.*.productId' => ['required', 'integer', 'distinct', 'exists:product,id'],
+            'items.*.productId' => ['required', 'integer', 'exists:product,id'],
+            'items.*.variantId' => ['nullable', 'integer', 'exists:product_variants,id'],
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:10000'],
         ]);
 
         $order = DB::transaction(function () use ($data, $request) {
-            $requestedItems = collect($data['items'])->keyBy('productId');
+            $productIds = collect($data['items'])->pluck('productId')->unique();
             $products = Product::query()
-                ->whereIn('id', $requestedItems->keys())
+                ->with('variants')
+                ->whereIn('id', $productIds)
                 ->orderBy('id')
                 ->lockForUpdate()
                 ->get()
                 ->keyBy('id');
 
-            if ($products->count() !== $requestedItems->count()) {
+            if ($products->count() !== $productIds->count()) {
                 throw ValidationException::withMessages([
                     'items' => 'Um ou mais produtos não estão mais disponíveis.',
                 ]);
             }
 
-            foreach ($products as $product) {
-                $quantity = (int) $requestedItems[$product->id]['quantity'];
-                if (! $product->active || $product->qty < $quantity) {
+            $remaining = [];
+            $orderItems = [];
+            $totalCents = 0;
+            foreach ($data['items'] as $requestedItem) {
+                $product = $products[$requestedItem['productId']];
+                $variant = null;
+                if ($product->variants->isNotEmpty()) {
+                    if (! empty($requestedItem['variantId'])) {
+                        $variant = ProductVariant::query()
+                            ->where('product_id', $product->id)
+                            ->where('active', true)
+                            ->lockForUpdate()
+                            ->find($requestedItem['variantId']);
+                    }
+                    if (! $variant) {
+                        throw ValidationException::withMessages([
+                            'items' => 'Selecione um tamanho válido para '.$product->name.'.',
+                        ]);
+                    }
+                } elseif (! empty($requestedItem['variantId'])) {
                     throw ValidationException::withMessages([
-                        'items' => $product->qty < 1
-                            ? 'Sem estoque para '.$product->name.'.'
-                            : 'Estoque insuficiente para '.$product->name.'. Disponível: '.$product->qty.'.',
+                        'items' => 'O tamanho selecionado não pertence a '.$product->name.'.',
                     ]);
                 }
 
-                if (! is_string($product->sku) || $product->sku === '') {
+                $sku = $variant?->sku ?? $product->sku;
+                if (! $product->active || ! is_string($sku) || $sku === '') {
                     throw ValidationException::withMessages([
                         'items' => 'O produto '.$product->name.' ainda não está vinculado ao PDV.',
                     ]);
                 }
 
+                $stockKey = $variant ? 'variant-'.$variant->id : 'product-'.$product->id;
+                $available = $remaining[$stockKey] ?? (int) ($variant?->qty ?? $product->qty);
+                $quantity = (int) $requestedItem['quantity'];
+                if ($available < $quantity) {
+                    throw ValidationException::withMessages([
+                        'items' => 'Estoque insuficiente para '.$product->name.($variant ? ' no tamanho '.($variant->attributes['size'] ?? $variant->name) : '').'.',
+                    ]);
+                }
+                $remaining[$stockKey] = $available - $quantity;
+
                 $product->load('currentPromotion');
-            }
-
-            $publicId = (string) Str::uuid();
-            $orderItems = [];
-            $totalCents = 0;
-
-            foreach ($products as $product) {
-                $quantity = (int) $requestedItems[$product->id]['quantity'];
                 $unitPriceCents = (int) round((float) $product->effective_price * 100);
                 $lineTotalCents = $unitPriceCents * $quantity;
                 $totalCents += $lineTotalCents;
                 $orderItems[] = [
                     'product' => $product,
+                    'variant' => $variant,
                     'quantity' => $quantity,
+                    'sku' => $sku,
                     'unitPriceCents' => $unitPriceCents,
                     'lineTotalCents' => $lineTotalCents,
                 ];
             }
 
+            $publicId = (string) Str::uuid();
             $orderId = DB::table('site_test_orders')->insertGetId([
                 'public_id' => $publicId,
                 'user_id' => $request->user()->id,
@@ -81,6 +105,7 @@ class SiteTestOrderController extends Controller
 
             foreach ($orderItems as $item) {
                 $product = $item['product'];
+                $variant = $item['variant'];
                 $changed = Product::query()
                     ->whereKey($product->id)
                     ->where('qty', '>=', $item['quantity'])
@@ -91,12 +116,23 @@ class SiteTestOrderController extends Controller
                         'items' => 'Estoque insuficiente para '.$product->name.'. Atualize o carrinho e tente novamente.',
                     ]);
                 }
+                if ($variant) {
+                    $changedVariant = ProductVariant::query()
+                        ->whereKey($variant->id)
+                        ->where('qty', '>=', $item['quantity'])
+                        ->decrement('qty', $item['quantity']);
+                    if ($changedVariant !== 1) {
+                        throw ValidationException::withMessages([
+                            'items' => 'O estoque do tamanho selecionado acabou. Atualize o carrinho e tente novamente.',
+                        ]);
+                    }
+                }
 
                 DB::table('site_test_order_items')->insert([
                     'order_id' => $orderId,
                     'product_id' => $product->id,
-                    'product_name' => $product->name,
-                    'sku' => $product->sku,
+                    'product_name' => $product->name.($variant ? ' (Tamanho '.($variant->attributes['size'] ?? $variant->name).')' : ''),
+                    'sku' => $item['sku'],
                     'quantity' => $item['quantity'],
                     'unit_price_cents' => $item['unitPriceCents'],
                     'total_cents' => $item['lineTotalCents'],

@@ -6,6 +6,7 @@ use App\Http\Controllers\LDMcontroller;
 use App\Http\Controllers\SiteTestOrderController;
 use App\Models\Category;
 use App\Models\Product;
+use App\Services\CatalogProductSearch;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [LDMcontroller::class, 'index'])->name('home');
@@ -37,30 +38,14 @@ Route::post('/pagina/marcas', [LDMcontroller::class, 'storeBrand'])->name('brand
 Route::get('/pagina/categorias', [LDMcontroller::class, 'categories']);
 Route::post('/pagina/categorias', [LDMcontroller::class, 'storeCategory'])->name('categories.store');
 
-Route::get('/pesquisa', function () {
+Route::get('/pesquisa', function (CatalogProductSearch $productSearch) {
 
     $pesquisa = trim((string) request('search', ''));
 
     $consultaBase = Product::with(['category', 'brand', 'images', 'currentPromotion'])
         ->where('active', true);
 
-    if ($pesquisa !== '') {
-        $consultaBase->where(function ($query) use ($pesquisa) {
-            $query->where('name', 'like', "%{$pesquisa}%")
-                ->orWhere('description', 'like', "%{$pesquisa}%")
-                ->orWhereHas('brand', function ($query) use ($pesquisa) {
-                    $query->where('name', 'like', "%{$pesquisa}%");
-                })
-
-                ->orWhereHas('category', function ($query) use ($pesquisa) {
-                    $query->where('name', 'like', "%{$pesquisa}%")
-                        ->orWhereHas('parent', function ($query) use ($pesquisa) {
-                            $query->where('name', 'like', "%{$pesquisa}%");
-                        });
-                });
-
-        });
-    }
+    $productSearch->apply($consultaBase, $pesquisa);
 
     $produtosEncontrados = (clone $consultaBase)->get();
     $categorias = $produtosEncontrados->pluck('category')
@@ -129,6 +114,9 @@ Route::get('/pesquisa', function () {
     return view(auth()->check() ? 'customer.dashboard' : 'public.home', [
         'pesquisa' => $pesquisa,
         'dados' => $dados,
+        'activeProductIds' => auth()->check()
+            ? Product::query()->where('active', true)->pluck('id')
+            : collect(),
         'categorias' => $categorias,
         'marcas' => $marcas,
         'favoritosCount' => 0,

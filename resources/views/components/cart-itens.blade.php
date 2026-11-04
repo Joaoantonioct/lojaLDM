@@ -47,7 +47,7 @@
                             $imagemPrincipal = $dado->images->firstWhere('is_main', true) ?? $dado->images->first();
                         @endphp
 
-                        <a href="{{ route('product.show', $dado) }}" class="search-product-link">
+                        <a href="{{ route('product.show', $dado) }}#product-content" class="search-product-link">
                             <div class="search-product-image">
                                 <img
                                     src="{{ $imagemPrincipal ? asset('storage/'.$imagemPrincipal->image) : asset('img/toddy.jpg') }}"

@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductColor;
 use App\Models\ProductImage;
+use App\Models\ProductVariant;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -35,10 +37,41 @@ class ExampleTest extends TestCase
         $this->actingAs(User::factory()->create())
             ->get(route('cliente'))
             ->assertOk()
+            ->assertSee('data-active-product-ids=""', false)
             ->assertSee('class="client-favorites-carousel"', false)
             ->assertSee('class="client-favorites-grid"', false)
             ->assertSee('aria-label="Ver favoritos anteriores"', false)
             ->assertSee('aria-label="Ver próximos favoritos"', false);
+    }
+
+    public function test_customer_dashboard_exposes_only_active_catalog_product_ids(): void
+    {
+        $category = Category::create([
+            'name' => 'Categoria de estado do catálogo',
+            'slug' => 'categoria-de-estado-do-catalogo',
+        ]);
+        $activeProduct = Product::create([
+            'category_id' => $category->id,
+            'name' => 'Produto ativo do catálogo',
+            'slug' => 'produto-ativo-do-catalogo',
+            'price' => '19.90',
+            'qty' => 1,
+            'active' => true,
+        ]);
+        Product::create([
+            'category_id' => $category->id,
+            'name' => 'Produto inativo do catálogo',
+            'slug' => 'produto-inativo-do-catalogo',
+            'price' => '19.90',
+            'qty' => 1,
+            'active' => false,
+        ]);
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('cliente'))
+            ->assertOk()
+            ->assertSee('data-active-product-ids="'.$activeProduct->id.'"', false)
+            ->assertDontSee('Produto inativo do catálogo');
     }
 
     public function test_customer_search_shortcut_targets_the_header_search_field(): void
@@ -129,6 +162,175 @@ class ExampleTest extends TestCase
             ->assertSee('Smartphone celular teste');
     }
 
+    public function test_general_clothing_search_finds_apparel_by_its_category(): void
+    {
+        $clothing = Category::create([
+            'name' => 'Vestuário teste',
+            'slug' => 'vestuario-pesquisa-teste',
+        ]);
+        $dress = Category::create([
+            'name' => 'Vestidos',
+            'slug' => 'vestidos-pesquisa-teste',
+            'parent_id' => $clothing->id,
+        ]);
+        $shoes = Category::create([
+            'name' => 'Calçados',
+            'slug' => 'calcados-pesquisa-teste',
+        ]);
+        Product::create([
+            'category_id' => $dress->id,
+            'name' => 'Modelo estampado pesquisa',
+            'slug' => 'modelo-estampado-pesquisa',
+            'price' => '79.90',
+            'qty' => 2,
+        ]);
+        Product::create([
+            'category_id' => $shoes->id,
+            'name' => 'Sapato fora da busca',
+            'slug' => 'sapato-fora-da-busca',
+            'price' => '99.90',
+            'qty' => 1,
+        ]);
+
+        $this->get(route('pesquisa', ['search' => 'roupas']))
+            ->assertOk()
+            ->assertSee('Modelo estampado pesquisa')
+            ->assertSee('Sapato fora da busca');
+    }
+
+    public function test_footwear_search_expands_synonyms_and_includes_subcategories(): void
+    {
+        $shoes = Category::create([
+            'name' => 'Calçados',
+            'slug' => 'calcados-sinonimos-teste',
+        ]);
+        $sneakers = Category::create([
+            'name' => 'Tênis',
+            'slug' => 'tenis-sinonimos-teste',
+            'parent_id' => $shoes->id,
+        ]);
+        Product::create([
+            'category_id' => $sneakers->id,
+            'name' => 'Modelo urbano sem termo de busca',
+            'slug' => 'modelo-urbano-sem-termo',
+            'price' => '129.90',
+            'qty' => 1,
+        ]);
+
+        $this->get(route('pesquisa', ['search' => 'sapatos']))
+            ->assertOk()
+            ->assertSee('Modelo urbano sem termo de busca');
+    }
+
+    public function test_customer_search_uses_the_same_apparel_expansion_as_catalog_search(): void
+    {
+        $category = Category::create([
+            'name' => 'Moda feminina',
+            'slug' => 'moda-feminina-pesquisa-cliente',
+        ]);
+        Product::create([
+            'category_id' => $category->id,
+            'name' => 'Peça exclusiva pesquisa cliente',
+            'slug' => 'peca-exclusiva-pesquisa-cliente',
+            'price' => '59.90',
+            'qty' => 1,
+        ]);
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('cliente', ['search' => 'roupas']))
+            ->assertOk()
+            ->assertSee('Peça exclusiva pesquisa cliente');
+    }
+
+    public function test_customer_interest_shortcut_shows_saved_products_and_similar_items(): void
+    {
+        $category = Category::create([
+            'name' => 'Calçados',
+            'slug' => 'calcados-interesses-teste',
+        ]);
+        $sneakers = Category::create([
+            'name' => 'Tênis',
+            'slug' => 'tenis-interesses-teste',
+            'parent_id' => $category->id,
+        ]);
+        $boots = Category::create([
+            'name' => 'Botas',
+            'slug' => 'botas-interesses-teste',
+            'parent_id' => $category->id,
+        ]);
+        $brand = Brand::create([
+            'name' => 'Marca interesses teste',
+            'slug' => 'marca-interesses-teste',
+        ]);
+        $interested = Product::create([
+            'category_id' => $sneakers->id,
+            'brand_id' => $brand->id,
+            'name' => 'Tênis salvo no interesse',
+            'slug' => 'tenis-salvo-no-interesse',
+            'price' => '100.00',
+            'qty' => 1,
+        ]);
+        Product::create([
+            'category_id' => $boots->id,
+            'name' => 'Bota da mesma categoria',
+            'slug' => 'bota-da-mesma-categoria',
+            'price' => '120.00',
+            'qty' => 1,
+        ]);
+        Product::create([
+            'category_id' => Category::create([
+                'name' => 'Acessórios',
+                'slug' => 'acessorios-interesses-teste',
+            ])->id,
+            'brand_id' => $brand->id,
+            'name' => 'Produto da mesma marca',
+            'slug' => 'produto-da-mesma-marca-interesse',
+            'price' => '80.00',
+            'qty' => 1,
+        ]);
+        Product::create([
+            'category_id' => Category::create([
+                'name' => 'Papelaria',
+                'slug' => 'papelaria-interesses-teste',
+            ])->id,
+            'name' => 'Produto sem relação',
+            'slug' => 'produto-sem-relacao-interesse',
+            'price' => '20.00',
+            'qty' => 1,
+        ]);
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('cliente', ['interest_products' => [$interested->id]]))
+            ->assertOk()
+            ->assertSee('Produtos que podem interessar')
+            ->assertSee('Tênis salvo no interesse')
+            ->assertSee('Bota da mesma categoria')
+            ->assertSee('Produto da mesma marca')
+            ->assertDontSee('Produto sem relação');
+    }
+
+    public function test_customer_interest_shortcut_falls_back_to_available_products_when_no_search_match_exists(): void
+    {
+        $category = Category::create([
+            'name' => 'Papelaria fallback teste',
+            'slug' => 'papelaria-fallback-interesses-teste',
+        ]);
+        Product::create([
+            'category_id' => $category->id,
+            'name' => 'Produto disponível de recomendação',
+            'slug' => 'produto-disponivel-recomendacao',
+            'price' => '10.00',
+            'qty' => 1,
+        ]);
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('cliente', ['interest_search' => 'termo sem correspondência']))
+            ->assertOk()
+            ->assertSee('Produtos que podem interessar')
+            ->assertSee('Produto disponível de recomendação')
+            ->assertDontSee('Nenhum produto encontrado');
+    }
+
     public function test_search_can_filter_products_by_new_or_seminovo_condition(): void
     {
         $category = Category::create([
@@ -209,6 +411,125 @@ class ExampleTest extends TestCase
             ->assertDontSee('class="catalog-carousel"', false);
     }
 
+    public function test_product_links_open_at_the_product_content_below_the_site_header(): void
+    {
+        $category = Category::create([
+            'name' => 'Categoria âncora produto',
+            'slug' => 'categoria-ancora-produto',
+        ]);
+        $product = Product::create([
+            'category_id' => $category->id,
+            'name' => 'Produto âncora',
+            'slug' => 'produto-ancora',
+            'price' => '19.90',
+            'qty' => 1,
+        ]);
+
+        $this->get(route('pesquisa', ['search' => 'Produto âncora']))
+            ->assertOk()
+            ->assertSee('href="'.route('product.show', $product).'#product-content"', false);
+
+        $this->get(route('product.show', $product))
+            ->assertOk()
+            ->assertSee('id="product-content"', false);
+    }
+
+    public function test_product_page_shows_all_sizes_and_disables_unavailable_options(): void
+    {
+        $category = Category::create([
+            'name' => 'Calças legging',
+            'slug' => 'calcas-legging',
+        ]);
+        $product = Product::create([
+            'category_id' => $category->id,
+            'name' => 'Calça Legging Estoque',
+            'slug' => 'calca-legging-estoque',
+            'price' => '50.00',
+            'qty' => 2,
+            'size_type' => 'trousers',
+        ]);
+        $product->variants()->create([
+            'name' => '36',
+            'sku' => 'SIZE-36-TEST',
+            'qty' => 2,
+            'attributes' => ['size' => '36'],
+            'active' => true,
+        ]);
+        $product->variants()->create([
+            'name' => '38',
+            'sku' => 'SIZE-38-TEST',
+            'qty' => 0,
+            'attributes' => ['size' => '38'],
+            'active' => true,
+        ]);
+
+        $this->get(route('product.show', $product))
+            ->assertOk()
+            ->assertSee('Estoque: 2 unidades disponíveis')
+            ->assertSee('Tamanho: <span data-size-selection>Escolha</span>', false)
+            ->assertDontSee('data-selected-size-stock', false)
+            ->assertSee('data-variant-id=', false)
+            ->assertSee('>36</span>', false)
+            ->assertSee('>38</span>', false)
+            ->assertSee('class="product-size-option is-unavailable"', false)
+            ->assertSee('data-size="38" data-color-id="" data-color-name="" data-stock="0" disabled required', false)
+            ->assertDontSee('<select id="product-size"', false);
+    }
+
+    public function test_product_page_renders_color_thumbnails_and_filters_clothing_sizes(): void
+    {
+        Storage::fake('public');
+        $category = Category::create([
+            'name' => 'Roupas',
+            'slug' => 'roupas',
+        ]);
+        $product = Product::create([
+            'category_id' => $category->id,
+            'name' => 'Blusa de malha',
+            'slug' => 'blusa-de-malha',
+            'price' => '39.90',
+            'qty' => 3,
+            'size_type' => 'clothing',
+        ]);
+        $black = ProductColor::create([
+            'product_id' => $product->id,
+            'name' => 'Preto',
+            'image' => 'products/black.jpg',
+        ]);
+        $blue = ProductColor::create([
+            'product_id' => $product->id,
+            'name' => 'Azul',
+            'image' => 'products/blue.jpg',
+        ]);
+        $product->variants()->create([
+            'color_id' => $black->id,
+            'name' => 'P',
+            'sku' => 'COLOR-BLACK-P',
+            'qty' => 2,
+            'attributes' => ['color' => 'Preto', 'size' => 'P'],
+            'active' => true,
+        ]);
+        $product->variants()->create([
+            'color_id' => $blue->id,
+            'name' => 'M',
+            'sku' => 'COLOR-BLUE-M',
+            'qty' => 1,
+            'attributes' => ['color' => 'Azul', 'size' => 'M'],
+            'active' => true,
+        ]);
+
+        $this->get(route('product.show', $product))
+            ->assertOk()
+            ->assertSee('Cor: <span data-color-selection>Escolha</span>', false)
+            ->assertSee('Tamanho: <span data-size-selection>Escolha</span>', false)
+            ->assertSee('aria-label="Cor Preto"', false)
+            ->assertSee('aria-label="Cor Azul"', false)
+            ->assertSee('data-size-color="'.$black->id.'"', false)
+            ->assertSee('data-size-color="'.$blue->id.'"', false)
+            ->assertDontSee('<span>Preto</span>', false)
+            ->assertDontSee('<span>Azul</span>', false);
+    }
+
     public function test_customer_search_keeps_other_sections_available_above_results(): void
     {
         $category = Category::create([
@@ -238,11 +559,11 @@ class ExampleTest extends TestCase
     {
         $this->postJson(route('brands.store'), ['name' => 'Marca criada no formulário'])
             ->assertCreated()
-            ->assertJsonPath('brand.name', 'Marca criada no formulário')
+            ->assertJsonPath('brand.name', 'Marca Criada No Formulário')
             ->assertJsonPath('existing', false);
 
         $this->assertDatabaseHas('brands', [
-            'name' => 'Marca criada no formulário',
+            'name' => 'Marca Criada No Formulário',
             'slug' => 'marca-criada-no-formulario',
             'active' => true,
         ]);
@@ -268,7 +589,7 @@ class ExampleTest extends TestCase
         $categoryResponse = $this->postJson(route('categories.store'), [
             'name' => 'Categoria inline',
         ])->assertCreated()
-            ->assertJsonPath('category.name', 'Categoria inline')
+            ->assertJsonPath('category.name', 'Categoria Inline')
             ->assertJsonPath('category.parent_id', null);
 
         $categoryId = $categoryResponse->json('category.id');
@@ -277,7 +598,7 @@ class ExampleTest extends TestCase
             'name' => 'Subcategoria inline',
             'parent_id' => $categoryId,
         ])->assertCreated()
-            ->assertJsonPath('category.name', 'Subcategoria inline')
+            ->assertJsonPath('category.name', 'Subcategoria Inline')
             ->assertJsonPath('category.parent_id', $categoryId);
 
         $this->postJson(route('categories.store'), [
@@ -288,7 +609,7 @@ class ExampleTest extends TestCase
             ->assertJsonPath('existing', true);
 
         $this->assertDatabaseHas('categories', [
-            'name' => 'Subcategoria inline',
+            'name' => 'Subcategoria Inline',
             'parent_id' => $categoryId,
         ]);
         $this->assertDatabaseCount('categories', 2);
@@ -308,6 +629,49 @@ class ExampleTest extends TestCase
             ->assertJsonPath('existing', true);
 
         $this->assertDatabaseCount('categories', 1);
+    }
+
+    public function test_product_brand_category_and_subcategory_names_use_consistent_title_case(): void
+    {
+        $brand = $this->postJson(route('brands.store'), [
+            'name' => '  mARCA   de bRINQUEDOS ',
+        ])->assertCreated()
+            ->assertJsonPath('brand.name', 'Marca De Brinquedos')
+            ->json('brand.id');
+
+        $category = $this->postJson(route('categories.store'), [
+            'name' => '  BRINQUEDOS ',
+        ])->assertCreated()
+            ->assertJsonPath('category.name', 'Brinquedos')
+            ->json('category.id');
+
+        $subcategory = $this->postJson(route('categories.store'), [
+            'name' => '  BONECAS   E JOGOS ',
+            'parent_id' => $category,
+        ])->assertCreated()
+            ->assertJsonPath('category.name', 'Bonecas E Jogos')
+            ->json('category.id');
+
+        Storage::fake('public');
+        $this->post('/pagina/add', [
+            'name' => '  BONECA   de PANO ',
+            'brand_id' => $brand,
+            'qty' => 1,
+            'description' => 'Produto de teste.',
+            'category_id' => $category,
+            'subcategory_id' => $subcategory,
+            'size_type' => 'none',
+            'price' => '25.00',
+            'cost' => '10.00',
+            'private' => 0,
+            'images' => [UploadedFile::fake()->create('produto.jpg', 100, 'image/jpeg')],
+        ])->assertRedirect('/');
+
+        $this->assertDatabaseHas('product', [
+            'name' => 'Boneca De Pano',
+            'brand_id' => $brand,
+            'category_id' => $subcategory,
+        ]);
     }
 
     public function test_guest_must_log_in_before_adding_a_product_to_cart(): void
@@ -370,7 +734,9 @@ class ExampleTest extends TestCase
             'name' => 'Produto teste',
             'brand_id' => $brand->id,
             'category_id' => $category->id,
+            'size_type' => 'none',
             'price' => '29.90',
+            'cost' => '12.00',
             'qty' => 3,
             'description' => 'Descrição do produto teste',
             'private' => 0,
@@ -396,6 +762,34 @@ class ExampleTest extends TestCase
         });
     }
 
+    public function test_product_cannot_be_created_without_cost_and_at_least_one_image(): void
+    {
+        $brand = Brand::create([
+            'name' => 'Marca campos obrigatórios',
+            'slug' => 'marca-campos-obrigatorios',
+        ]);
+        $category = Category::create([
+            'name' => 'Categoria campos obrigatórios',
+            'slug' => 'categoria-campos-obrigatorios',
+        ]);
+
+        $this->from('/pagina/add')
+            ->post('/pagina/add', [
+                'name' => 'Produto incompleto',
+                'brand_id' => $brand->id,
+                'category_id' => $category->id,
+                'size_type' => 'none',
+                'price' => '29.90',
+                'qty' => 3,
+                'description' => 'Descrição do produto incompleto.',
+                'private' => 0,
+            ])
+            ->assertRedirect('/pagina/add')
+            ->assertSessionHasErrors(['cost', 'images']);
+
+        $this->assertDatabaseMissing('product', ['name' => 'Produto Incompleto']);
+    }
+
     public function test_product_price_accepts_brazilian_decimal_comma(): void
     {
         $brand = Brand::create([
@@ -413,12 +807,15 @@ class ExampleTest extends TestCase
             'qty' => 2,
             'description' => 'Descrição de teste.',
             'category_id' => $category->id,
+            'size_type' => 'none',
             'price' => '29,90',
+            'cost' => '12.00',
             'private' => 0,
+            'images' => [UploadedFile::fake()->create('produto.jpg', 100, 'image/jpeg')],
         ])->assertRedirect('/');
 
         $this->assertDatabaseHas('product', [
-            'name' => 'Produto com preço local',
+            'name' => 'Produto Com Preço Local',
             'price' => '29.90',
             'condition' => null,
         ]);
@@ -435,20 +832,28 @@ class ExampleTest extends TestCase
             'slug' => 'roupas-seminovo',
         ]);
 
+        Storage::fake('public');
         $this->post('/pagina/add', [
             'name' => 'Produto seminovo cadastrado',
             'brand_id' => $brand->id,
             'qty' => 1,
             'description' => 'Produto em bom estado.',
             'category_id' => $category->id,
+            'size_type' => 'clothing',
             'price' => '25.00',
+            'cost' => '10.00',
             'private' => 0,
+            'images' => [UploadedFile::fake()->create('produto.jpg', 100, 'image/jpeg')],
             'condition' => 'seminovo',
+            'variants' => [
+                ['size' => 'M', 'qty' => 1],
+            ],
         ])->assertRedirect('/');
 
         $this->assertDatabaseHas('product', [
-            'name' => 'Produto seminovo cadastrado',
+            'name' => 'Produto Seminovo Cadastrado',
             'condition' => 'seminovo',
+            'size_type' => 'clothing',
         ]);
     }
 
@@ -470,6 +875,10 @@ class ExampleTest extends TestCase
                 'qty' => 1,
                 'description' => 'Calçado de teste.',
                 'category_id' => $category->id,
+                'size_type' => 'footwear',
+                'variants' => [
+                    ['size' => '40', 'qty' => 1],
+                ],
                 'price' => '100.00',
                 'private' => 0,
             ])
@@ -488,19 +897,23 @@ class ExampleTest extends TestCase
             'slug' => 'papelaria-sem-estado',
         ]);
 
+        Storage::fake('public');
         $this->post('/pagina/add', [
             'name' => 'Caderno sem estado de roupa',
             'brand_id' => $brand->id,
             'qty' => 1,
             'description' => 'Produto de papelaria.',
             'category_id' => $category->id,
+            'size_type' => 'none',
             'price' => '10.00',
+            'cost' => '4.00',
             'private' => 0,
+            'images' => [UploadedFile::fake()->create('produto.jpg', 100, 'image/jpeg')],
             'condition' => 'brecho',
         ])->assertRedirect('/');
 
         $this->assertDatabaseHas('product', [
-            'name' => 'Caderno sem estado de roupa',
+            'name' => 'Caderno Sem Estado De Roupa',
             'condition' => null,
         ]);
     }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\ProductPromotion;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -37,10 +38,14 @@ class PdvSyncController extends Controller
                 return ['received' => true, 'duplicate' => true];
             }
 
-            $product = Product::query()
+            $variant = ProductVariant::query()
                 ->where('sku', $payload['sku'])
                 ->lockForUpdate()
                 ->first();
+            $product = Product::query()
+                ->where('sku', $payload['sku'])
+                ->lockForUpdate()
+                ->first() ?? $variant?->product()->lockForUpdate()->first();
 
             if (! $product) {
                 abort(422, 'Não existe produto no site com o SKU '.$payload['sku'].'.');
@@ -48,6 +53,14 @@ class PdvSyncController extends Controller
 
             switch ($event['type']) {
                 case 'inventory.delta':
+                    if ($variant) {
+                        $variantQuantity = $variant->qty + $payload['delta'];
+                        if ($variantQuantity < 0) {
+                            abort(409, 'O movimento deixaria o estoque do tamanho '.$variant->name.' negativo.');
+                        }
+                        $variant->qty = $variantQuantity;
+                        $variant->save();
+                    }
                     $quantity = $product->qty + $payload['delta'];
                     if ($quantity < 0) {
                         abort(409, 'O movimento deixaria o estoque do site negativo para o SKU '.$payload['sku'].'.');
@@ -57,12 +70,25 @@ class PdvSyncController extends Controller
                     break;
 
                 case 'inventory.set':
+                    if ($variant) {
+                        $product->qty += $payload['quantity'] - $variant->qty;
+                        $variant->qty = $payload['quantity'];
+                        $variant->save();
+                        $product->save();
+                        break;
+                    }
                     $product->qty = $payload['quantity'];
                     $product->save();
                     break;
 
                 case 'product.price':
                     $product->price = $this->decimalFromCents($payload['priceCents']);
+                    if (isset($payload['costCents'])) {
+                        $product->cost = $this->decimalFromCents($payload['costCents']);
+                    }
+                    if (array_key_exists('description', $payload)) {
+                        $product->description = $payload['description'];
+                    }
                     $product->save();
                     break;
 
@@ -126,6 +152,8 @@ class PdvSyncController extends Controller
             ];
         } elseif ($type === 'product.price') {
             $rules['priceCents'] = ['required', 'integer', 'min:0', 'max:2147483647'];
+            $rules['costCents'] = ['nullable', 'integer', 'min:0', 'max:2147483647'];
+            $rules['description'] = ['sometimes', 'nullable', 'string', 'max:1000'];
         } elseif ($type === 'promotion.upsert') {
             $rules += [
                 'promotionId' => ['required', 'integer', 'min:1'],

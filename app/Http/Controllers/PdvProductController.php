@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Services\PdvIdentifierAllocator;
+use App\Support\ProductSizeCatalog;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -26,34 +28,59 @@ class PdvProductController extends Controller
     public function store(Request $request, PdvIdentifierAllocator $allocator): JsonResponse
     {
         $request->merge([
-            'name' => is_string($request->input('name')) ? trim($request->input('name')) : $request->input('name'),
+            'name' => is_string($request->input('name'))
+                ? Str::title(Str::squish($request->input('name')))
+                : $request->input('name'),
             'category' => is_string($request->input('category')) && trim($request->input('category')) !== ''
-                ? trim($request->input('category'))
+                ? Str::title(Str::squish($request->input('category')))
                 : 'Geral',
+            'brand' => is_string($request->input('brand'))
+                ? Str::title(Str::squish($request->input('brand')))
+                : $request->input('brand'),
         ]);
 
         $data = $request->validate([
             'eventId' => ['required', 'uuid'],
             'name' => ['required', 'string', 'max:150'],
+            'description' => ['nullable', 'string', 'max:1000'],
             'category' => ['required', 'string', 'max:100'],
+            'sizeType' => ['sometimes', 'string', 'in:none,clothing,trousers,footwear'],
+            'brand' => ['nullable', 'string', 'max:100'],
             'sku' => ['required', 'string', 'regex:/^PDV-[0-9]{6,}$/', 'max:100'],
             'barcode' => ['required', 'string', 'regex:/^2[0-9][0-9]{11}$/'],
             'priceCents' => ['required', 'integer', 'min:0', 'max:2147483647'],
+            'costCents' => ['nullable', 'integer', 'min:0', 'max:2147483647'],
+            'condition' => ['nullable', 'string', 'in:novo,seminovo,brecho'],
             'quantity' => ['required', 'integer', 'min:0', 'max:2147483647'],
+            'colors' => ['sometimes', 'array', 'max:10'],
+            'colors.*.name' => ['required_with:colors', 'string', 'max:50'],
+            'colors.*.imageData' => ['required_with:colors', 'string', 'max:1400000'],
+            'variants' => ['sometimes', 'array', 'max:140'],
+            'variants.*.color' => ['nullable', 'string', 'max:50'],
+            'variants.*.size' => ['nullable', 'string', 'max:20'],
+            'variants.*.sku' => ['required_with:variants', 'string', 'regex:/^PDV-[0-9]{6,}$/', 'max:100'],
+            'variants.*.barcode' => ['required_with:variants', 'string', 'regex:/^2[0-9]{12}$/'],
+            'variants.*.quantity' => ['required_with:variants', 'integer', 'min:0', 'max:2147483647'],
             'images' => ['sometimes', 'array', 'max:10'],
             'images.*' => ['required', 'string', 'max:1400000'],
         ]);
         $images = $this->decodeImages($data['images'] ?? []);
+        $colorImages = $this->decodeImages(array_column($data['colors'] ?? [], 'imageData'));
 
         if (! $allocator->isValidBarcode($data['barcode'])) {
             throw ValidationException::withMessages(['barcode' => 'O código de barras informado é inválido.']);
+        }
+        foreach ($data['variants'] ?? [] as $index => $variant) {
+            if (! $allocator->isValidBarcode($variant['barcode'])) {
+                throw ValidationException::withMessages(["variants.{$index}.barcode" => 'O código de barras da variação é inválido.']);
+            }
         }
 
         $payloadHash = hash('sha256', json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
         try {
             $storedImagePaths = [];
-            $result = DB::transaction(function () use ($data, $payloadHash, $allocator, $images, &$storedImagePaths): array {
+            $result = DB::transaction(function () use ($data, $payloadHash, $allocator, $images, $colorImages, &$storedImagePaths): array {
                 $receipt = DB::table('pdv_product_receipts')
                     ->where('event_id', $data['eventId'])
                     ->lockForUpdate()
@@ -68,19 +95,105 @@ class PdvProductController extends Controller
                 }
 
                 $category = $this->categoryFor($data['category']);
+                $category->loadMissing('parent');
+                $sizeType = $data['sizeType'] ?? $category->apparelSizeType() ?? 'none';
+                $hasSizeVariants = $sizeType !== 'none';
+                $variants = $data['variants'] ?? [];
+                $colors = $data['colors'] ?? [];
+                if ($hasSizeVariants && $variants === []) {
+                    throw ValidationException::withMessages([
+                        'variants' => 'Cadastre o estoque das combinações de cor e tamanho para este produto.',
+                    ]);
+                }
+                $knownColors = [];
+                foreach ($colors as $color) {
+                    $key = mb_strtolower(trim($color['name']));
+                    if (isset($knownColors[$key])) {
+                        throw ValidationException::withMessages(['colors' => 'Não repita o nome de uma cor.']);
+                    }
+                    $knownColors[$key] = true;
+                }
+                $seenCombinations = [];
+                if ($variants !== []) {
+                    $allowedSizes = ProductSizeCatalog::forType($sizeType);
+                    foreach ($variants as $index => $variant) {
+                        $color = $variant['color'] ?? '';
+                        $size = $variant['size'] ?? '';
+                        if ($colors !== [] && ! isset($knownColors[mb_strtolower($color)])) {
+                            throw ValidationException::withMessages(["variants.{$index}.color" => 'Selecione uma cor cadastrada.']);
+                        }
+                        if ($hasSizeVariants && ! in_array($size, $allowedSizes, true)) {
+                            throw ValidationException::withMessages(["variants.{$index}.size" => 'Tamanho incompatível com a categoria.']);
+                        }
+                        if (! $hasSizeVariants && $size !== '') {
+                            throw ValidationException::withMessages(["variants.{$index}.size" => 'Este produto não aceita tamanhos.']);
+                        }
+                        $combination = mb_strtolower($color).'|'.$size;
+                        if (isset($seenCombinations[$combination])) {
+                            throw ValidationException::withMessages(['variants' => 'Não repita a combinação de cor e tamanho.']);
+                        }
+                        $seenCombinations[$combination] = true;
+                    }
+                    if (array_sum(array_column($variants, 'quantity')) !== $data['quantity']) {
+                        throw ValidationException::withMessages(['quantity' => 'O estoque total deve corresponder à soma dos tamanhos.']);
+                    }
+                }
+                if ($colors !== [] && count(array_unique(array_map(
+                    fn ($variant) => mb_strtolower($variant['color'] ?? ''),
+                    $variants,
+                ))) !== count($colors)) {
+                    throw ValidationException::withMessages(['variants' => 'Informe o estoque de cada cor cadastrada.']);
+                }
+                if (! $hasSizeVariants && $colors === [] && $variants !== []) {
+                    throw ValidationException::withMessages(['variants' => 'Este produto não aceita variações sem cor.']);
+                }
+                $brand = $this->brandFor($data['brand'] ?? null);
                 $product = Product::query()->create([
                     'name' => $data['name'],
                     'slug' => Str::slug($data['name']).'-'.Str::lower(Str::random(6)),
                     'category_id' => $category->id,
-                    'brand_id' => null,
+                    'brand_id' => $brand->id ?? null,
                     'qty' => $data['quantity'],
-                    'description' => null,
+                    'description' => $data['description'] ?? null,
                     'price' => $this->decimalFromCents($data['priceCents']),
+                    'cost' => isset($data['costCents']) ? $this->decimalFromCents($data['costCents']) : 0,
+                    'condition' => $data['condition'] ?? null,
+                    'size_type' => $sizeType,
                     'private' => false,
                     'active' => true,
                 ]);
 
                 $allocator->attachReserved($data['sku'], $data['barcode'], $product);
+
+                $productColors = [];
+                foreach ($colors as $index => $color) {
+                    $imagePath = 'products/'.$product->id.'/colors/'.Str::uuid().'.jpg';
+                    if (! Storage::disk('public')->put($imagePath, $colorImages[$index])) {
+                        throw new \RuntimeException('Não foi possível armazenar a imagem da cor.');
+                    }
+                    $storedImagePaths[] = $imagePath;
+                    $productColors[mb_strtolower($color['name'])] = $product->colors()->create([
+                        'name' => $color['name'],
+                        'image' => $imagePath,
+                    ]);
+                }
+
+                foreach ($variants as $variant) {
+                    $color = $productColors[mb_strtolower($variant['color'] ?? '')] ?? null;
+                    $size = $variant['size'] ?? '';
+                    $product->variants()->create([
+                        'color_id' => $color?->id,
+                        'name' => trim(($color?->name ?? '').' '.$size) ?: null,
+                        'sku' => $variant['sku'],
+                        'barcode' => $variant['barcode'],
+                        'qty' => $variant['quantity'],
+                        'attributes' => array_filter([
+                            'color' => $color?->name,
+                            'size' => $size ?: null,
+                        ]),
+                        'active' => true,
+                    ]);
+                }
 
                 foreach ($images as $position => $imageBytes) {
                     $imagePath = 'products/'.$product->id.'/'.Str::uuid().'.jpg';
@@ -133,28 +246,54 @@ class PdvProductController extends Controller
         $records = DB::table('pdv_product_outbox')
             ->join('product', 'product.id', '=', 'pdv_product_outbox.product_id')
             ->join('categories', 'categories.id', '=', 'product.category_id')
+            ->leftJoin('brands', 'brands.id', '=', 'product.brand_id')
             ->whereNull('pdv_product_outbox.acknowledged_at')
             ->orderBy('pdv_product_outbox.created_at')
             ->get([
                 'pdv_product_outbox.event_id as eventId',
                 'product.id as product_id',
                 'product.name',
+                'product.description',
                 'categories.name as category',
+                'brands.name as brand',
                 'product.sku',
                 'product.barcode',
                 'product.price',
+                'product.cost',
+                'product.condition',
+                'product.size_type',
                 'product.qty',
             ])
-            ->map(fn ($record): array => [
-                'eventId' => $record->eventId,
-                'name' => $record->name,
-                'category' => $record->category,
-                'sku' => $record->sku,
-                'barcode' => $record->barcode,
-                'priceCents' => (int) round((float) $record->price * 100),
-                'quantity' => (int) $record->qty,
-                'imageData' => $this->primaryImageData((int) $record->product_id),
-            ]);
+            ->map(function ($record): array {
+                $product = Product::query()->with(['variants.color', 'colors', 'category.parent'])->findOrFail((int) $record->product_id);
+
+                return [
+                    'eventId' => $record->eventId,
+                    'name' => $record->name,
+                    'description' => $record->description,
+                    'category' => $record->category,
+                    'brand' => $record->brand,
+                    'sku' => $record->sku,
+                    'barcode' => $record->barcode,
+                    'priceCents' => (int) round((float) $record->price * 100),
+                    'costCents' => (int) round((float) ($record->cost ?? 0) * 100),
+                    'condition' => $record->condition,
+                    'sizeType' => $record->size_type ?? $product->category?->apparelSizeType() ?? 'none',
+                    'quantity' => (int) $record->qty,
+                    'variants' => $product->variants->where('active', true)->map(fn ($variant): array => [
+                        'color' => $variant->color?->name,
+                        'size' => $variant->attributes['size'] ?? null,
+                        'sku' => $variant->sku,
+                        'barcode' => $variant->barcode,
+                        'quantity' => (int) $variant->qty,
+                    ])->values(),
+                    'colors' => $product->colors->map(fn ($color): array => [
+                        'name' => $color->name,
+                        'imageData' => $this->colorImageData($color->image),
+                    ])->values(),
+                    'imageData' => $this->primaryImageData((int) $record->product_id),
+                ];
+            });
 
         return response()->json(['data' => $records]);
     }
@@ -310,6 +449,7 @@ class PdvProductController extends Controller
 
     private function categoryFor(string $name): Category
     {
+        $name = Str::title(Str::squish($name));
         $category = Category::query()
             ->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])
             ->first();
@@ -321,6 +461,30 @@ class PdvProductController extends Controller
         $baseSlug = Str::slug($name) ?: 'categoria';
 
         return Category::query()->create([
+            'name' => $name,
+            'slug' => $baseSlug.'-'.Str::lower(Str::random(6)),
+            'active' => true,
+        ]);
+    }
+
+    private function brandFor(?string $name): ?Brand
+    {
+        if (! $name) {
+            return null;
+        }
+
+        $name = Str::title(Str::squish($name));
+        $brand = Brand::query()
+            ->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])
+            ->first();
+
+        if ($brand) {
+            return $brand;
+        }
+
+        $baseSlug = Str::slug($name) ?: 'marca';
+
+        return Brand::query()->create([
             'name' => $name,
             'slug' => $baseSlug.'-'.Str::lower(Str::random(6)),
             'active' => true,
@@ -383,6 +547,21 @@ class PdvProductController extends Controller
         }
 
         return 'data:'.$mimeType.';base64,'.base64_encode($disk->get($image->image));
+    }
+
+    private function colorImageData(string $imagePath): string
+    {
+        $disk = Storage::disk('public');
+        if (! $disk->exists($imagePath)) {
+            abort(500, 'O arquivo da imagem de uma cor não foi encontrado.');
+        }
+
+        $mimeType = $disk->mimeType($imagePath);
+        if (! in_array($mimeType, ['image/jpeg', 'image/png', 'image/webp'], true)) {
+            abort(500, 'O formato da imagem de uma cor não pode ser enviado ao PDV.');
+        }
+
+        return 'data:'.$mimeType.';base64,'.base64_encode($disk->get($imagePath));
     }
 
     private function decimalFromCents(int $cents): string

@@ -8,10 +8,21 @@
     $images = $product->images;
     $mainImage = $images->first();
     $fallbackImage = asset('img/toddy.jpg');
+    $availableVariants = $product->variants->where('qty', '>', 0);
+    $hasSizeVariants = $product->size_type !== 'none'
+        && ($product->size_type !== null || $product->variants->contains(fn ($variant) => ! empty($variant->attributes['size'])));
+    $hasColorVariants = $product->colors->isNotEmpty();
+    $initialColor = $product->colors->first(
+        fn ($color) => $availableVariants->contains('color_id', $color->id),
+    );
+    $canPurchase = $product->variants->isNotEmpty()
+        ? $availableVariants->isNotEmpty()
+        : $product->qty > 0;
 @endphp
 
 <main
     class="product-page"
+    id="product-content"
     data-client-id="{{ auth()->id() }}"
     data-product-id="{{ $product->id }}"
     data-product-name="{{ $product->name }}"
@@ -19,6 +30,7 @@
     data-product-price="{{ $product->effective_price }}"
     data-product-stock="{{ $product->qty }}"
     data-product-condition="{{ $product->conditionLabel() }}"
+    data-product-variants="{{ $product->variants->map(fn ($variant) => ['id' => $variant->id, 'size' => $variant->attributes['size'] ?? null, 'colorId' => $variant->color_id, 'color' => $variant->color?->name, 'stock' => $variant->qty])->values()->toJson() }}"
 >
     <nav class="product-breadcrumbs" aria-label="Navegação estrutural">
         <span><a href="{{ url('/') }}">Início</a> / {{ $product->category?->name ?? 'Produtos' }} / {{ $product->name }}</span>
@@ -70,7 +82,9 @@
                 <p class="font-semibold text-red-700">{{ number_format($product->currentPromotion->discount_basis_points / 100, 2, ',', '.') }}% OFF</p>
             @endif
             <p class="product-price">R$ {{ number_format((float) $product->effective_price, 2, ',', '.') }}</p>
-            <p class="product-payment-note">Preço do produto</p>
+            <p class="product-payment-note {{ $product->qty > 0 ? 'is-available' : 'is-unavailable' }}">
+                Estoque: {{ $product->qty }} {{ $product->qty === 1 ? 'unidade disponível' : 'unidades disponíveis' }}
+            </p>
             <div class="product-summary-divider"></div>
             <h2 class="product-summary-heading">Sobre este produto</h2>
             <p class="product-summary-description">{{ $product->description ?: 'Consulte as características do produto abaixo.' }}</p>
@@ -79,14 +93,67 @@
 
         <aside class="product-purchase" aria-label="Comprar produto">
             <h2>Disponibilidade</h2>
+            @if($hasColorVariants)
+                <fieldset class="product-size-selector product-color-selector" data-product-color tabindex="-1">
+                    <legend>Cor: <span data-color-selection>Escolha</span></legend>
+                    <div class="product-color-options">
+                        @foreach($product->colors as $color)
+                            @php
+                                $colorHasStock = $availableVariants->contains('color_id', $color->id);
+                            @endphp
+                            <label class="product-color-option {{ $colorHasStock ? '' : 'is-unavailable' }}" title="{{ $color->name }}">
+                                <input type="radio" name="product-color" value="{{ $color->id }}" aria-label="Cor {{ $color->name }}" data-color-id="{{ $color->id }}" data-color-name="{{ $color->name }}" data-color-image="{{ asset('storage/'.$color->image) }}" data-color-variant-id="{{ $availableVariants->firstWhere('color_id', $color->id)?->id }}" data-stock="{{ $availableVariants->firstWhere('color_id', $color->id)?->qty ?? 0 }}" {{ $colorHasStock ? '' : 'disabled' }} {{ $initialColor?->id === $color->id ? 'checked' : '' }} required>
+                                <img src="{{ asset('storage/'.$color->image) }}" alt="" loading="lazy">
+                            </label>
+                        @endforeach
+                    </div>
+                </fieldset>
+            @endif
+            @if($hasSizeVariants && $product->variants->isNotEmpty())
+                <fieldset class="product-size-selector" data-product-size tabindex="-1">
+                    <legend>Tamanho: <span data-size-selection>Escolha</span></legend>
+                    <div class="product-size-options">
+                        @forelse($product->variants as $variant)
+                            @php
+                                $size = $variant->attributes['size'] ?? $variant->name;
+                            @endphp
+                            @if($size)
+                                <label class="product-size-option {{ $variant->qty > 0 ? '' : 'is-unavailable' }}" data-size-color="{{ $variant->color_id ?? '' }}" {{ $hasColorVariants ? 'hidden' : '' }}>
+                                    <input type="radio" name="product-size" value="{{ $variant->id }}" data-variant-id="{{ $variant->id }}" data-size="{{ $size }}" data-color-id="{{ $variant->color_id ?? '' }}" data-color-name="{{ $variant->color?->name ?? '' }}" data-stock="{{ $variant->qty }}" {{ $variant->qty > 0 ? '' : 'disabled' }} required>
+                                    <span>{{ $size }}</span>
+                                </label>
+                            @endif
+                        @empty
+                            <p class="purchase-quantity">Nenhum tamanho disponível no momento.</p>
+                        @endforelse
+                    </div>
+                </fieldset>
+            @elseif($product->variants->isNotEmpty())
+                <fieldset class="product-size-selector" data-product-size tabindex="-1">
+                    <legend>Tamanho: <span data-size-selection>Escolha</span></legend>
+                    <div class="product-size-options">
+                        @forelse($product->variants as $variant)
+                            @php
+                                $size = $variant->attributes['size'] ?? $variant->name;
+                            @endphp
+                            <label class="product-size-option {{ $variant->qty > 0 ? '' : 'is-unavailable' }}">
+                                <input type="radio" name="product-size" value="{{ $variant->id }}" data-variant-id="{{ $variant->id }}" data-size="{{ $size }}" data-stock="{{ $variant->qty }}" {{ $variant->qty > 0 ? '' : 'disabled' }} required>
+                                <span>{{ $size }}</span>
+                            </label>
+                        @empty
+                            <p class="purchase-quantity">Nenhum tamanho disponível no momento.</p>
+                        @endforelse
+                    </div>
+                </fieldset>
+            @endif
             <p class="purchase-stock {{ $product->qty > 0 ? 'is-available' : 'is-unavailable' }}">
                 {{ $product->qty > 0 ? 'Em estoque' : 'Sem estoque' }}
             </p>
-            @if($product->qty > 0)
+            @if($product->variants->isEmpty() && $product->qty > 0)
                 <p class="purchase-quantity">{{ $product->qty }} unidade(s) disponível(is)</p>
             @endif
             <div class="product-actions">
-                @if($product->qty > 0)
+                @if($canPurchase)
                     @guest
                         <a class="product-button buy" href="{{ route('login', ['redirect' => '/product/'.$product->id]) }}">Comprar agora</a>
                         <a class="product-button cart" href="{{ route('login', ['redirect' => '/product/'.$product->id]) }}">Adicionar ao carrinho</a>
@@ -121,7 +188,7 @@
                         @php
                             $catalogImage = $catalogProduct->images->firstWhere('is_main', true) ?? $catalogProduct->images->first();
                         @endphp
-                        <a class="product-catalog-card" href="{{ route('product.show', $catalogProduct) }}">
+                        <a class="product-catalog-card" href="{{ route('product.show', $catalogProduct) }}#product-content">
                             <span class="product-catalog-image">
                                 <img src="{{ $catalogImage ? asset('storage/'.$catalogImage->image) : $fallbackImage }}" alt="{{ $catalogProduct->name }}" loading="lazy">
                             </span>

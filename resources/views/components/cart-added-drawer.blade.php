@@ -26,7 +26,7 @@
                         @php
                             $suggestionImage = $suggestion->images->firstWhere('is_main', true) ?? $suggestion->images->first();
                         @endphp
-                        <a class="cart-drawer-product-card" href="{{ route('product.show', $suggestion) }}">
+                        <a class="cart-drawer-product-card" href="{{ route('product.show', $suggestion) }}#product-content">
                             <span class="cart-drawer-product-image">
                                 <img src="{{ $suggestionImage ? asset('storage/'.$suggestionImage->image) : asset('img/toddy.jpg') }}" alt="{{ $suggestion->name }}" loading="lazy">
                             </span>
