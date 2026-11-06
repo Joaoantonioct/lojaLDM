@@ -28,7 +28,7 @@ class PdvSyncController extends Controller
 
         $event = $request->validate([
             'eventId' => ['required', 'uuid'],
-            'type' => ['required', 'string', 'in:inventory.delta,inventory.set,product.price,promotion.upsert,promotion.cancel'],
+            'type' => ['required', 'string', 'in:inventory.delta,inventory.set,product.price,product.variant.price,promotion.upsert,promotion.cancel'],
             'payload' => ['required', 'array'],
         ]);
         $payload = $this->validatePayload($event['type'], $event['payload']);
@@ -79,6 +79,16 @@ class PdvSyncController extends Controller
                     }
                     $product->qty = $payload['quantity'];
                     $product->save();
+                    break;
+
+                case 'product.variant.price':
+                    if (! $variant || (int) $variant->product_id !== (int) $product->id) {
+                        abort(422, 'Não existe variação correspondente no site para o SKU '.$payload['sku'].'.');
+                    }
+                    $variant->price = $payload['priceCents'] === null
+                        ? null
+                        : $this->decimalFromCents((int) $payload['priceCents']);
+                    $variant->save();
                     break;
 
                 case 'product.price':
@@ -150,6 +160,8 @@ class PdvSyncController extends Controller
                 'quantity' => ['required', 'integer', 'min:0', 'max:2147483647'],
                 'reason' => ['required', 'string', 'max:240'],
             ];
+        } elseif ($type === 'product.variant.price') {
+            $rules['priceCents'] = ['present', 'nullable', 'integer', 'min:0', 'max:2147483647'];
         } elseif ($type === 'product.price') {
             $rules['priceCents'] = ['required', 'integer', 'min:0', 'max:2147483647'];
             $rules['costCents'] = ['nullable', 'integer', 'min:0', 'max:2147483647'];

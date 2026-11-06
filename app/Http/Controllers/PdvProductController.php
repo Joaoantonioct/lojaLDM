@@ -61,6 +61,7 @@ class PdvProductController extends Controller
             'variants.*.sku' => ['required_with:variants', 'string', 'regex:/^PDV-[0-9]{6,}$/', 'max:100'],
             'variants.*.barcode' => ['required_with:variants', 'string', 'regex:/^2[0-9]{12}$/'],
             'variants.*.quantity' => ['required_with:variants', 'integer', 'min:0', 'max:2147483647'],
+            'variants.*.priceCents' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:2147483647'],
             'images' => ['sometimes', 'array', 'max:10'],
             'images.*' => ['required', 'string', 'max:1400000'],
         ]);
@@ -187,6 +188,7 @@ class PdvProductController extends Controller
                         'sku' => $variant['sku'],
                         'barcode' => $variant['barcode'],
                         'qty' => $variant['quantity'],
+                        'price' => isset($variant['priceCents']) ? $this->decimalFromCents($variant['priceCents']) : null,
                         'attributes' => array_filter([
                             'color' => $color?->name,
                             'size' => $size ?: null,
@@ -286,6 +288,7 @@ class PdvProductController extends Controller
                         'sku' => $variant->sku,
                         'barcode' => $variant->barcode,
                         'quantity' => (int) $variant->qty,
+                        'priceCents' => $variant->price === null ? null : (int) round((float) $variant->price * 100),
                     ])->values(),
                     'colors' => $product->colors->map(fn ($color): array => [
                         'name' => $color->name,
