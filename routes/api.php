@@ -2,7 +2,13 @@
 
 use App\Http\Controllers\PdvProductController;
 use App\Http\Controllers\PdvSyncController;
+use App\Http\Controllers\AsaasWebhookController;
+use App\Http\Controllers\PublicationController;
 use Illuminate\Support\Facades\Route;
+
+Route::post('/asaas/webhook', [AsaasWebhookController::class, 'handle'])
+    ->middleware('throttle:120,1')
+    ->name('asaas.webhook');
 
 Route::prefix('pdv')->middleware(['pdv.auth', 'throttle:600,1'])->group(function (): void {
     Route::post('/sync', [PdvSyncController::class, 'store'])->name('pdv.sync');
@@ -15,4 +21,5 @@ Route::prefix('pdv')->middleware(['pdv.auth', 'throttle:600,1'])->group(function
     Route::get('/site-orders/history', [PdvProductController::class, 'siteOrderHistory'])->name('pdv.site-orders.history');
     Route::get('/products/review', [PdvProductController::class, 'review'])->name('pdv.products.review');
     Route::post('/products/link', [PdvProductController::class, 'link'])->name('pdv.products.link');
+    Route::post('/publications', [PublicationController::class, 'store'])->name('pdv.publications.store');
 });

@@ -16,6 +16,7 @@
         'resources/css/catalog-carousel.css',
         'resources/js/app.js',
         'resources/js/cart-itens.js',
+        'resources/js/cart.js',
     ])
     @stack('styles')
 </head>

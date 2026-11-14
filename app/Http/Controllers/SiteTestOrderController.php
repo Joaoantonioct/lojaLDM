@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\ProductVariant;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -16,14 +18,78 @@ class SiteTestOrderController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'items' => ['required', 'array', 'min:1', 'max:20'],
+            'publicationId' => ['nullable', 'integer', 'required_without:items', 'exists:publications,id'],
+            'items' => ['required_without:publicationId', 'array', 'min:1', 'max:20'],
             'items.*.productId' => ['required', 'integer', 'exists:product,id'],
             'items.*.variantId' => ['nullable', 'integer', 'exists:product_variants,id'],
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:10000'],
         ]);
 
-        $order = DB::transaction(function () use ($data, $request) {
-            $productIds = collect($data['items'])->pluck('productId')->unique();
+        $apiKey = (string) config('services.asaas.api_key');
+        $baseUrl = rtrim((string) config('services.asaas.base_url'), '/');
+
+        if ($apiKey === '' || $baseUrl === '') {
+            return response()->json([
+                'message' => 'O pagamento está temporariamente indisponível.',
+            ], 503);
+        }
+
+        $publicationId = isset($data['publicationId']) ? (int) $data['publicationId'] : null;
+        $requestedItems = collect($data['items'] ?? [])
+            ->groupBy(fn ($item) =>
+                $item['productId'].'-'.($item['variantId'] ?? 'none')
+            )
+            ->map(function ($group) {
+                $first = $group->first();
+
+                return [
+                    'productId' => (int) $first['productId'],
+                    'variantId' => ! empty($first['variantId'])
+                        ? (int) $first['variantId']
+                        : null,
+                    'quantity' => (int) $group->sum('quantity'),
+                ];
+            })
+            ->values()
+            ->all();
+
+        $order = DB::transaction(function () use (
+            $requestedItems,
+            $publicationId,
+            $request
+        ): array {
+            if ($publicationId !== null) {
+                $publication = DB::table('publications')
+                    ->where('id', $publicationId)
+                    ->lockForUpdate()
+                    ->first();
+                $publicationItems = DB::table('publication_items')
+                    ->where('publication_id', $publicationId)
+                    ->orderBy('position')
+                    ->lockForUpdate()
+                    ->get(['product_id', 'variant_id']);
+
+                if (! $publication || $publicationItems->isEmpty() || ($publication->expires_at !== null && \Illuminate\Support\Carbon::parse($publication->expires_at)->isPast())) {
+                    throw ValidationException::withMessages([
+                        'items' => 'Esta combinação não está mais disponível.',
+                    ]);
+                }
+
+                $requestedItems = $publicationItems->map(fn ($item): array => [
+                    'productId' => (int) $item->product_id,
+                    'variantId' => $item->variant_id === null ? null : (int) $item->variant_id,
+                    'quantity' => 1,
+                ])->all();
+            } else {
+                $requestedItems = $requestedItems->all();
+            }
+
+            $productIds = collect($requestedItems)
+                ->pluck('productId')
+                ->unique()
+                ->sort()
+                ->values();
+
             $products = Product::query()
                 ->with('variants')
                 ->whereIn('id', $productIds)
@@ -34,56 +100,83 @@ class SiteTestOrderController extends Controller
 
             if ($products->count() !== $productIds->count()) {
                 throw ValidationException::withMessages([
-                    'items' => 'Um ou mais produtos não estão mais disponíveis.',
+                    'items' => 'Um ou mais produtos não estão disponíveis.',
                 ]);
             }
 
-            $remaining = [];
             $orderItems = [];
             $totalCents = 0;
-            foreach ($data['items'] as $requestedItem) {
+
+            foreach ($requestedItems as $requestedItem) {
                 $product = $products[$requestedItem['productId']];
                 $variant = null;
+                $quantity = $requestedItem['quantity'];
+
                 if ($product->variants->isNotEmpty()) {
-                    if (! empty($requestedItem['variantId'])) {
+                    if ($requestedItem['variantId'] !== null) {
                         $variant = ProductVariant::query()
                             ->where('product_id', $product->id)
                             ->where('active', true)
+                            ->whereKey($requestedItem['variantId'])
                             ->lockForUpdate()
-                            ->find($requestedItem['variantId']);
+                            ->first();
                     }
+
                     if (! $variant) {
                         throw ValidationException::withMessages([
-                            'items' => 'Selecione um tamanho válido para '.$product->name.'.',
+                            'items' => 'Selecione uma variação válida para '.$product->name.'.',
                         ]);
                     }
-                } elseif (! empty($requestedItem['variantId'])) {
+                } elseif ($requestedItem['variantId'] !== null) {
                     throw ValidationException::withMessages([
-                        'items' => 'O tamanho selecionado não pertence a '.$product->name.'.',
+                        'items' => 'A variação selecionada não pertence a '.$product->name.'.',
                     ]);
                 }
 
                 $sku = $variant?->sku ?? $product->sku;
+
                 if (! $product->active || ! is_string($sku) || $sku === '') {
                     throw ValidationException::withMessages([
-                        'items' => 'O produto '.$product->name.' ainda não está vinculado ao PDV.',
+                        'items' => 'O produto '.$product->name.' não está disponível para venda.',
                     ]);
                 }
 
-                $stockKey = $variant ? 'variant-'.$variant->id : 'product-'.$product->id;
-                $available = $remaining[$stockKey] ?? (int) ($variant?->qty ?? $product->qty);
-                $quantity = (int) $requestedItem['quantity'];
+                $available = (int) ($variant?->qty ?? $product->qty);
+
                 if ($available < $quantity) {
                     throw ValidationException::withMessages([
-                        'items' => 'Estoque insuficiente para '.$product->name.($variant ? ' no tamanho '.($variant->attributes['size'] ?? $variant->name) : '').'.',
+                        'items' => 'Estoque insuficiente para '.$product->name.'.',
                     ]);
                 }
-                $remaining[$stockKey] = $available - $quantity;
 
                 $product->load('currentPromotion');
-                $unitPriceCents = (int) round((float) $product->effective_price * 100);
+
+                if ($variant && $variant->price !== null) {
+                    $unitPriceCents = (int) round(
+                        (float) $variant->price * 100
+                    );
+                } else {
+                    $unitPriceCents = (int) round(
+                        (float) $product->effective_price * 100
+                    );
+                }
+
+                if ($unitPriceCents <= 0) {
+                    throw ValidationException::withMessages([
+                        'items' => 'Preço inválido para '.$product->name.'.',
+                    ]);
+                }
+
                 $lineTotalCents = $unitPriceCents * $quantity;
                 $totalCents += $lineTotalCents;
+
+                $variantDescription = $variant
+                    ? collect([
+                        $variant->attributes['color'] ?? null,
+                        $variant->attributes['size'] ?? $variant->name,
+                    ])->filter()->implode(', ')
+                    : '';
+
                 $orderItems[] = [
                     'product' => $product,
                     'variant' => $variant,
@@ -91,10 +184,12 @@ class SiteTestOrderController extends Controller
                     'sku' => $sku,
                     'unitPriceCents' => $unitPriceCents,
                     'lineTotalCents' => $lineTotalCents,
+                    'productName' => $product->name.($variantDescription !== '' ? ' ('.$variantDescription.')' : ''),
                 ];
             }
 
             $publicId = (string) Str::uuid();
+
             $orderId = DB::table('site_test_orders')->insertGetId([
                 'public_id' => $publicId,
                 'user_id' => $request->user()->id,
@@ -103,27 +198,33 @@ class SiteTestOrderController extends Controller
                 'updated_at' => now(),
             ]);
 
+            $asaasItems = [];
+
             foreach ($orderItems as $item) {
                 $product = $item['product'];
                 $variant = $item['variant'];
+                $quantity = $item['quantity'];
+
                 $changed = Product::query()
                     ->whereKey($product->id)
-                    ->where('qty', '>=', $item['quantity'])
-                    ->decrement('qty', $item['quantity']);
+                    ->where('qty', '>=', $quantity)
+                    ->decrement('qty', $quantity);
 
                 if ($changed !== 1) {
                     throw ValidationException::withMessages([
-                        'items' => 'Estoque insuficiente para '.$product->name.'. Atualize o carrinho e tente novamente.',
+                        'items' => 'Estoque insuficiente para '.$product->name.'.',
                     ]);
                 }
+
                 if ($variant) {
                     $changedVariant = ProductVariant::query()
                         ->whereKey($variant->id)
-                        ->where('qty', '>=', $item['quantity'])
-                        ->decrement('qty', $item['quantity']);
+                        ->where('qty', '>=', $quantity)
+                        ->decrement('qty', $quantity);
+
                     if ($changedVariant !== 1) {
                         throw ValidationException::withMessages([
-                            'items' => 'O estoque do tamanho selecionado acabou. Atualize o carrinho e tente novamente.',
+                            'items' => 'O estoque da variação selecionada acabou.',
                         ]);
                     }
                 }
@@ -131,30 +232,225 @@ class SiteTestOrderController extends Controller
                 DB::table('site_test_order_items')->insert([
                     'order_id' => $orderId,
                     'product_id' => $product->id,
-                    'product_name' => $product->name.($variant ? ' (Tamanho '.($variant->attributes['size'] ?? $variant->name).')' : ''),
+                    'variant_id' => $variant?->id,
+                    'product_name' => $item['productName'],
                     'sku' => $item['sku'],
-                    'quantity' => $item['quantity'],
+                    'quantity' => $quantity,
                     'unit_price_cents' => $item['unitPriceCents'],
                     'total_cents' => $item['lineTotalCents'],
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
+
+                $asaasItems[] = [
+                    'name' => Str::substr(trim($item['productName']), 0, 30),
+                    'quantity' => $quantity,
+                    'value' => round($item['unitPriceCents'] / 100, 2),
+                ];
             }
 
-            DB::table('pdv_site_order_outbox')->insert([
-                'event_id' => (string) Str::uuid(),
-                'order_id' => $orderId,
-                'created_at' => now(),
+            return [
+                'id' => $orderId,
+                'publicId' => $publicId,
+                'totalCents' => $totalCents,
+                'items' => $asaasItems,
+            ];
+        });
+
+        $returnUrl = route('cart.test.complete', [
+            'publicId' => $order['publicId'],
+        ]);
+
+        $payload = [
+            'billingTypes' => ['PIX', 'CREDIT_CARD'],
+            'chargeTypes' => ['DETACHED'],
+            'minutesToExpire' => 60,
+            'externalReference' => $order['publicId'],
+            'items' => $order['items'],
+            'callback' => [
+                'successUrl' => $returnUrl,
+                'cancelUrl' => $returnUrl,
+                'expiredUrl' => $returnUrl,
+            ],
+        ];
+
+        try {
+            $response = Http::timeout(25)
+                ->withHeaders([
+                    'access_token' => $apiKey,
+                    'Content-Type' => 'application/json',
+                    'Accept' => 'application/json',
+                ])
+                ->post($baseUrl.'/checkouts', $payload);
+        } catch (ConnectionException $exception) {
+            DB::table('site_test_orders')
+                ->where('id', $order['id'])
+                ->update([
+                    'order_status' => 'payment_review',
+                    'payment_status' => 'checkout_unknown',
+                    'updated_at' => now(),
+                ]);
+
+            return response()->json([
+                'message' => 'Não foi possível confirmar a criação do pagamento. O pedido ficou reservado para verificação. Não tente pagar novamente antes de verificar.',
+            ], 502);
+        }
+	
+	if ($response->failed()) {
+    	   \Illuminate\Support\Facades\Log::warning('ASAAS recusou a criação do checkout', [
+             'http_status' => $response->status(),
+             'errors' => collect($response->json('errors', []))
+               ->map(fn ($error) => [
+                 'code' => $error['code'] ?? null,
+                 'description' => $error['description'] ?? null,
+            ])
+            ->all(),
+    ]);
+	
+            if ($response->status() >= 400
+                && $response->status() < 500
+                && ! in_array($response->status(), [408, 429], true)
+            ) {
+                $this->releaseReservation($order['id']);
+
+                return response()->json([
+                    'message' => 'O ASAAS recusou a criação do checkout. O estoque foi devolvido. Verifique a configuração antes de tentar novamente.',
+                ], 502);
+            }
+
+            DB::table('site_test_orders')
+                ->where('id', $order['id'])
+                ->update([
+                    'order_status' => 'payment_review',
+                    'payment_status' => 'checkout_unknown',
+                    'updated_at' => now(),
+                ]);
+
+            return response()->json([
+                'message' => 'Não foi possível confirmar o resultado da solicitação ao ASAAS. O pedido ficou reservado para verificação.',
+            ], 502);
+        }
+
+        $checkout = $response->json();
+        $checkoutId = data_get($checkout, 'id');
+        $checkoutUrl = data_get($checkout, 'link');
+
+        if (
+            ! is_string($checkoutId)
+            || $checkoutId === ''
+            || ! is_string($checkoutUrl)
+            || ! filter_var($checkoutUrl, FILTER_VALIDATE_URL)
+        ) {
+            DB::table('site_test_orders')
+                ->where('id', $order['id'])
+                ->update([
+                    'order_status' => 'payment_review',
+                    'payment_status' => 'checkout_unknown',
+                    'asaas_checkout_id' => $checkoutId,
+                    'updated_at' => now(),
+                ]);
+
+            return response()->json([
+                'message' => 'O ASAAS respondeu, mas não foi possível validar o link do pagamento. O pedido ficou reservado para verificação.',
+            ], 502);
+        }
+
+        $expiresAt = now()->addMinutes(60);
+
+        DB::table('site_test_orders')
+            ->where('id', $order['id'])
+            ->update([
+                'asaas_checkout_id' => $checkoutId,
+                'asaas_checkout_url' => $checkoutUrl,
+                'payment_due_at' => $expiresAt,
+                'expires_at' => $expiresAt,
                 'updated_at' => now(),
             ]);
 
-            return ['publicId' => $publicId, 'totalCents' => $totalCents];
-        });
-
         return response()->json([
-            'message' => 'Pedido de teste registrado. Nenhum pagamento foi processado.',
-            'redirectUrl' => route('cart.test.complete', $order['publicId']),
+            'message' => 'Checkout criado. Escolha Pix ou cartão para concluir o pagamento.',
+            'redirectUrl' => $checkoutUrl,
         ], 201);
+    }
+
+    private function releaseReservation(int $orderId): void
+    {
+        DB::transaction(function () use ($orderId): void {
+            $order = DB::table('site_test_orders')
+                ->where('id', $orderId)
+                ->lockForUpdate()
+                ->first();
+
+            if (
+                ! $order
+                || $order->reservation_released_at !== null
+                || $order->payment_status === 'confirmed'
+                || $order->order_status === 'paid'
+                || $order->payment_status === 'paid_review'
+            ) {
+                return;
+            }
+
+            $items = DB::table('site_test_order_items')
+                ->where('order_id', $orderId)
+                ->orderBy('id')
+                ->get(['product_id', 'variant_id', 'quantity']);
+
+            $productIds = $items->pluck('product_id')
+                ->unique()->sort()->values();
+
+            $variantIds = $items->pluck('variant_id')
+                ->filter()->unique()->sort()->values();
+
+            if ($productIds->isNotEmpty()) {
+                DB::table('product')
+                    ->whereIn('id', $productIds)
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->get(['id']);
+            }
+
+            if ($variantIds->isNotEmpty()) {
+                DB::table('product_variants')
+                    ->whereIn('id', $variantIds)
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->get(['id']);
+            }
+
+            foreach ($items as $item) {
+                $productUpdated = DB::table('product')
+                    ->where('id', $item->product_id)
+                    ->increment('qty', (int) $item->quantity);
+
+                if ($productUpdated !== 1) {
+                    throw new \RuntimeException(
+                        'Não foi possível devolver o estoque do produto.'
+                    );
+                }
+
+                if ($item->variant_id !== null) {
+                    $variantUpdated = DB::table('product_variants')
+                        ->where('id', $item->variant_id)
+                        ->increment('qty', (int) $item->quantity);
+
+                    if ($variantUpdated !== 1) {
+                        throw new \RuntimeException(
+                            'Não foi possível devolver o estoque da variação.'
+                        );
+                    }
+                }
+            }
+
+            DB::table('site_test_orders')
+                ->where('id', $orderId)
+                ->update([
+                    'order_status' => 'checkout_failed',
+                    'payment_status' => 'failed',
+                    'reservation_released_at' => now(),
+                    'updated_at' => now(),
+                ]);
+        }, 3);
     }
 
     public function complete(string $publicId): View

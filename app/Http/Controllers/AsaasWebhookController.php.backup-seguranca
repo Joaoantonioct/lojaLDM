@@ -1,0 +1,213 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use RuntimeException;
+
+class AsaasWebhookController extends Controller
+{
+    public function handle(Request $request): JsonResponse
+    {
+        $expectedToken = (string) config('services.asaas.webhook_token');
+        $receivedToken = (string) $request->header('asaas-access-token');
+
+        if ($expectedToken === '') {
+            abort(503, 'Token do webhook não configurado.');
+        }
+
+        if (! hash_equals($expectedToken, $receivedToken)) {
+            abort(401, 'Token do webhook inválido.');
+        }
+
+        $data = $request->validate([
+            'id' => ['required', 'string', 'max:150'],
+            'event' => ['required', 'in:CHECKOUT_CREATED,CHECKOUT_PAID,CHECKOUT_CANCELED,CHECKOUT_EXPIRED'],
+            'checkout' => ['required', 'array'],
+            'checkout.id' => ['required', 'string', 'max:120'],
+            'checkout.status' => ['required', 'string', 'max:30'],
+        ]);
+
+        $eventId = $data['id'];
+        $eventType = $data['event'];
+        $checkoutId = $data['checkout']['id'];
+        $checkoutStatus = $data['checkout']['status'];
+
+        $expectedStatus = [
+            'CHECKOUT_CREATED' => 'ACTIVE',
+            'CHECKOUT_PAID' => 'PAID',
+            'CHECKOUT_CANCELED' => 'CANCELED',
+            'CHECKOUT_EXPIRED' => 'EXPIRED',
+        ][$eventType];
+
+        if ($checkoutStatus !== $expectedStatus) {
+            abort(422, 'O estado do Checkout não corresponde ao evento recebido.');
+        }
+
+        $checkoutItems = [];
+
+        if ($eventType === 'CHECKOUT_PAID') {
+            $itemsData = $request->validate([
+                'checkout.items' => ['required', 'array', 'min:1'],
+                'checkout.items.*.quantity' => ['required', 'integer', 'min:1'],
+                'checkout.items.*.value' => ['required', 'numeric', 'gt:0'],
+            ]);
+
+            $checkoutItems = $itemsData['checkout']['items'];
+        }
+
+        $result = DB::transaction(function () use (
+            $eventId,
+            $eventType,
+            $checkoutId,
+            $checkoutItems
+        ): array {
+            $inserted = DB::table('asaas_webhook_events')->insertOrIgnore([
+                'event_id' => $eventId,
+                'event_type' => $eventType,
+                'processing_status' => 'pending',
+                'received_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            if ($inserted === 0) {
+                return ['duplicate' => true, 'review' => false];
+            }
+
+            $order = DB::table('site_test_orders')
+                ->where('asaas_checkout_id', $checkoutId)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $order) {
+                throw new RuntimeException(
+                    'Pedido não encontrado para o Checkout '.$checkoutId
+                );
+            }
+
+            $review = false;
+
+            if ($eventType === 'CHECKOUT_PAID') {
+                $checkoutTotalCents = 0;
+
+                foreach ($checkoutItems as $item) {
+                    $unitValueCents = (int) round(((float) $item['value']) * 100);
+                    $checkoutTotalCents += $unitValueCents * (int) $item['quantity'];
+                }
+
+                $amountMatches = $checkoutTotalCents === (int) $order->total_cents;
+
+                if (! $amountMatches || $order->reservation_released_at !== null) {
+                    DB::table('site_test_orders')
+                        ->where('id', $order->id)
+                        ->update([
+                            'order_status' => 'payment_review',
+                            'payment_status' => 'paid_review',
+                            'paid_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+
+                    $review = true;
+                } elseif ($order->payment_status !== 'confirmed') {
+                    DB::table('site_test_orders')
+                        ->where('id', $order->id)
+                        ->update([
+                            'order_status' => 'paid',
+                            'payment_status' => 'confirmed',
+                            'paid_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+
+                    $outboxExists = DB::table('pdv_site_order_outbox')
+                        ->where('order_id', $order->id)
+                        ->exists();
+
+                    if (! $outboxExists) {
+                        DB::table('pdv_site_order_outbox')->insert([
+                            'event_id' => (string) Str::uuid(),
+                            'order_id' => $order->id,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
+                }
+            }
+
+            if (
+                in_array($eventType, ['CHECKOUT_CANCELED', 'CHECKOUT_EXPIRED'], true)
+                && $order->payment_status !== 'confirmed'
+                && $order->order_status !== 'paid'
+                && $order->reservation_released_at === null
+            ) {
+                $items = DB::table('site_test_order_items')
+                    ->where('order_id', $order->id)
+                    ->orderBy('id')
+                    ->get(['product_id', 'variant_id', 'quantity']);
+
+                $productIds = $items->pluck('product_id')->unique()->sort()->values();
+                $variantIds = $items->pluck('variant_id')->filter()->unique()->sort()->values();
+
+                if ($productIds->isNotEmpty()) {
+                    DB::table('product')
+                        ->whereIn('id', $productIds)
+                        ->orderBy('id')
+                        ->lockForUpdate()
+                        ->get(['id']);
+                }
+
+                if ($variantIds->isNotEmpty()) {
+                    DB::table('product_variants')
+                        ->whereIn('id', $variantIds)
+                        ->orderBy('id')
+                        ->lockForUpdate()
+                        ->get(['id']);
+                }
+
+                foreach ($items as $item) {
+                    DB::table('product')
+                        ->where('id', $item->product_id)
+                        ->increment('qty', (int) $item->quantity);
+
+                    if ($item->variant_id !== null) {
+                        DB::table('product_variants')
+                            ->where('id', $item->variant_id)
+                            ->increment('qty', (int) $item->quantity);
+                    }
+                }
+
+                $finalStatus = $eventType === 'CHECKOUT_CANCELED'
+                    ? 'canceled'
+                    : 'expired';
+
+                DB::table('site_test_orders')
+                    ->where('id', $order->id)
+                    ->update([
+                        'order_status' => $finalStatus,
+                        'payment_status' => $finalStatus,
+                        'reservation_released_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+            }
+
+            DB::table('asaas_webhook_events')
+                ->where('event_id', $eventId)
+                ->update([
+                    'processing_status' => 'processed',
+                    'processed_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+            return ['duplicate' => false, 'review' => $review];
+        }, 3);
+
+        return response()->json([
+            'received' => true,
+            'duplicate' => $result['duplicate'],
+            'paymentReview' => $result['review'],
+        ]);
+    }
+}

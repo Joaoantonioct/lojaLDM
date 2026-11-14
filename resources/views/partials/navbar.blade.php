@@ -26,6 +26,7 @@
             </li>
 
             <li><a href="{{ route('home') }}">Home</a></li>
+            <li><a href="{{ route('publications.index') }}">Combinações</a></li>
             <li><a href="{{ (auth()->check() ? route('cliente') : route('pesquisa')) . '#produtos' }}">Todos os Produtos</a></li>
             <li><a href="{{ route('pesquisa', ['search' => 'Papelaria']) }}">Papelaria</a></li>
             <li><a href="{{ route('pesquisa', ['search' => 'Roupas']) }}">Roupas</a></li>

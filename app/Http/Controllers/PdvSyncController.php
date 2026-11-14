@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\ProductPromotion;
+use App\Services\PublicationInventoryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,7 +14,7 @@ use Illuminate\Validation\ValidationException;
 
 class PdvSyncController extends Controller
 {
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, PublicationInventoryService $publicationInventory): JsonResponse
     {
         $token = (string) config('pdv.sync_token');
         $providedToken = (string) $request->bearerToken();
@@ -33,7 +34,7 @@ class PdvSyncController extends Controller
         ]);
         $payload = $this->validatePayload($event['type'], $event['payload']);
 
-        $result = DB::transaction(function () use ($event, $payload): array {
+        $result = DB::transaction(function () use ($event, $payload, $publicationInventory): array {
             if (DB::table('pdv_sync_receipts')->where('event_id', $event['eventId'])->exists()) {
                 return ['received' => true, 'duplicate' => true];
             }
@@ -129,6 +130,10 @@ class PdvSyncController extends Controller
                         }
                     }
                     break;
+            }
+
+            if (in_array($event['type'], ['inventory.delta', 'inventory.set'], true)) {
+                $publicationInventory->removeUnavailable();
             }
 
             DB::table('pdv_sync_receipts')->insert([

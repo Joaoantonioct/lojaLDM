@@ -4,6 +4,44 @@ import {
     writeCustomerList,
 } from './customer-state.js';
 
+document.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-publication-buy]');
+
+    if (!button || button.disabled) return;
+
+    const feedback = button.parentElement.querySelector('[data-publication-feedback]');
+    button.disabled = true;
+    if (feedback) {
+        feedback.hidden = true;
+        feedback.textContent = '';
+    }
+
+    try {
+        const response = await fetch(button.dataset.checkoutUrl, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': button.dataset.csrfToken,
+            },
+            body: JSON.stringify({ publicationId: Number(button.dataset.publicationId) }),
+        });
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.errors?.items?.[0] || result.message || 'Não foi possível iniciar a compra.');
+        }
+
+        window.location.assign(result.redirectUrl);
+    } catch (error) {
+        if (feedback) {
+            feedback.textContent = error.message || 'Não foi possível iniciar a compra.';
+            feedback.hidden = false;
+        }
+        button.disabled = false;
+    }
+});
+
 const page = document.querySelector('[data-cart-page]');
 
 if (page) {

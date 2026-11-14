@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductColor;
 use App\Models\ProductImage;
+use App\Models\Publication;
 use App\Services\CatalogProductSearch;
 use App\Services\PdvIdentifierAllocator;
 use App\Support\ProductSizeCatalog;
@@ -25,6 +26,18 @@ class LDMcontroller extends Controller
             'dados' => $dados,
             'pesquisa' => null,
         ]);
+    }
+
+    public function publications()
+    {
+        $publications = Publication::query()
+            ->with(['items.product.images', 'items.product.currentPromotion', 'items.product.category', 'items.variant.color'])
+            ->latest()
+            ->get()
+            ->filter(fn (Publication $publication): bool => $publication->isAvailable())
+            ->values();
+
+        return view('public.publications', compact('publications'));
     }
 
     public function client(CatalogProductSearch $productSearch)

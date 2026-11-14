@@ -325,6 +325,8 @@ class PdvProductController extends Controller
     {
         $orders = DB::table('pdv_site_order_outbox')
             ->join('site_test_orders', 'site_test_orders.id', '=', 'pdv_site_order_outbox.order_id')
+	    ->where('site_test_orders.order_status', 'paid')
+		->where('site_test_orders.payment_status', 'confirmed')		
             ->whereNull('pdv_site_order_outbox.acknowledged_at')
             ->orderBy('pdv_site_order_outbox.created_at')
             ->get([
@@ -345,7 +347,10 @@ class PdvProductController extends Controller
         $cursor = (int) ($data['afterId'] ?? 0);
         $orders = DB::table('site_test_orders')
             ->join('pdv_site_order_outbox', 'pdv_site_order_outbox.order_id', '=', 'site_test_orders.id')
-            ->where('site_test_orders.id', '>', $cursor)
+            
+	    ->where('site_test_orders.order_status', 'paid')
+	    ->where('site_test_orders.payment_status', 'confirmed')
+	    ->where('site_test_orders.id', '>', $cursor)
             ->orderBy('site_test_orders.id')
             ->limit(100)
             ->get([

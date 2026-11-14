@@ -10,6 +10,7 @@ use App\Services\CatalogProductSearch;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [LDMcontroller::class, 'index'])->name('home');
+Route::get('/publicacoes', [LDMcontroller::class, 'publications'])->name('publications.index');
 Route::get('/carrinho', [CartController::class, 'index'])->name('cart.index');
 Route::middleware('auth')->post('/carrinho/finalizar', [SiteTestOrderController::class, 'store'])
     ->name('cart.test.store');
